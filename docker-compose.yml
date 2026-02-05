@@ -1,0 +1,34 @@
+﻿version: "3.9"
+services:
+  db:
+    image: postgres:16
+    container_name: runly-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: runly
+    ports:
+      - "5432:5432"
+    volumes:
+      - runly_pg_data:/var/lib/postgresql/data
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: runly-app
+    depends_on:
+      - db
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/runly
+      NEXT_PUBLIC_APP_NAME: Runly
+    command: npm run dev
+    volumes:
+      - .:/app
+      - /app/node_modules
+
+volumes:
+  runly_pg_data:
