@@ -6,8 +6,8 @@ export default async function RunsPage() {
 
   return (
     <section className="space-y-6">
-      <h1 className="text-2xl font-semibold">Treninzi</h1>
-      <p className="text-sm text-slate-600">Pretraga i filter rade nad test podacima u frontendu.</p>
+      <h1 className="text-3xl font-semibold text-[var(--color-ink)]">Treninzi</h1>
+      <p className="text-sm text-[var(--color-muted)]">Pretraga i filter rade nad test podacima u frontendu.</p>
       <RunsBoard />
     </section>
   );

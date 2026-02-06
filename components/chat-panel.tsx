@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { locations, messages, runs, users } from "@/lib/mock-data";
+import { Card, CardText } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { InputField, SelectField } from "@/components/ui/input-field";
 
 const CURRENT_USER_ID = "u1";
 
@@ -24,32 +27,29 @@ export function ChatPanel() {
 
   if (!myRuns.length) {
     return (
-      <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-600">
-        Trenutno nisi član nijednog treninga.
-      </div>
+      <Card>
+        <CardText>Trenutno nisi član nijednog treninga.</CardText>
+      </Card>
     );
   }
 
   return (
-    <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-6">
-      <label className="block">
-        <span className="text-xs uppercase tracking-wide text-slate-500">Izaberi trening</span>
-        <select
-          value={activeRunId}
-          onChange={(event) => setActiveRunId(event.target.value)}
-          className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none ring-emerald-200 focus:ring"
-        >
-          {myRuns.map((run) => (
-            <option key={run.runId} value={run.runId}>
-              {run.title}
-            </option>
-          ))}
-        </select>
-      </label>
+    <Card className="space-y-4">
+      <SelectField
+        label="Izaberi trening"
+        value={activeRunId}
+        onChange={(event) => setActiveRunId(event.target.value)}
+      >
+        {myRuns.map((run) => (
+          <option key={run.runId} value={run.runId}>
+            {run.title}
+          </option>
+        ))}
+      </SelectField>
 
       {activeRun ? (
-        <div className="rounded-lg border border-slate-100 bg-slate-50 p-3 text-sm text-slate-700">
-          <p className="font-medium">{activeRun.title}</p>
+        <div className="rounded-xl border border-[var(--color-line)] bg-slate-50 p-3 text-sm text-[var(--color-muted)]">
+          <p className="font-medium text-[var(--color-ink)]">{activeRun.title}</p>
           <p>
             Lokacija: {activeLocation?.city} ({activeLocation?.municipality})
           </p>
@@ -59,13 +59,13 @@ export function ChatPanel() {
 
       <ul className="space-y-3">
         {groupMessages.map((message) => (
-          <li key={message.messageId} className="rounded-lg border border-slate-100 bg-slate-50 p-3">
-            <p className="text-sm font-medium">{message.from}</p>
-            <p className="mt-1 text-sm text-slate-700">{message.content}</p>
+          <li key={message.messageId} className="rounded-xl border border-[var(--color-line)] bg-white p-3">
+            <p className="text-sm font-semibold text-[var(--color-ink)]">{message.from}</p>
+            <p className="mt-1 text-sm text-[var(--color-muted)]">{message.content}</p>
           </li>
         ))}
         {groupMessages.length === 0 ? (
-          <li className="rounded-lg border border-slate-100 bg-slate-50 p-3 text-sm text-slate-600">
+          <li className="rounded-xl border border-[var(--color-line)] bg-white p-3 text-sm text-[var(--color-muted)]">
             Još nema poruka u ovoj grupi.
           </li>
         ) : null}
@@ -94,16 +94,16 @@ export function ChatPanel() {
           setDraft("");
         }}
       >
-        <input
+        <InputField
+          label="Poruka grupi"
           value={draft}
-          onChange={(event) => setDraft(event.target.value)}
           placeholder="Unesi poruku za grupu treninga..."
-          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none ring-emerald-200 focus:ring"
+          onChange={(event) => setDraft(event.target.value)}
         />
-        <button className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700">
-          Pošalji
-        </button>
+        <div className="pt-[22px]">
+          <Button type="submit">Pošalji</Button>
+        </div>
       </form>
-    </div>
+    </Card>
   );
 }

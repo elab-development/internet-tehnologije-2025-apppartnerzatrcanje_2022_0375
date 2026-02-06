@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireAuth } from "@/lib/auth";
+import { Card, CardText, CardTitle } from "@/components/ui/card";
 
 const cards = [
   {
@@ -23,11 +24,6 @@ const cards = [
     href: "/chat",
   },
   {
-    title: "Ocene",
-    description: "Ostavi utisak nakon zajednickog treninga.",
-    href: "/ratings",
-  },
-  {
     title: "Admin",
     description: "Administracija korisnika i moderacija sistema.",
     href: "/admin",
@@ -39,22 +35,20 @@ export default async function MainPage() {
 
   return (
     <section className="space-y-8">
-      <header className="rounded-2xl bg-gradient-to-r from-emerald-600 to-cyan-600 p-8 text-white">
+      <header className="rounded-3xl border border-[var(--color-track-soft)] bg-gradient-to-r from-[#3c7d6a] via-[#4a9a82] to-[#c98a72] p-8 text-center text-white">
         <h1 className="text-4xl font-bold tracking-tight">Runly Glavna Stranica</h1>
-        <p className="mt-3 max-w-2xl text-emerald-50">
-          Glavni moduli za pretragu partnera, treninge, poruke, ocene i admin deo.
+        <p className="mx-auto mt-3 max-w-2xl text-emerald-50">
+          Glavni moduli za pretragu partnera, treninge i grupne poruke.
         </p>
       </header>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {cards.map((card) => (
-          <Link
-            key={card.href}
-            href={card.href}
-            className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-300"
-          >
-            <h2 className="text-lg font-semibold text-slate-900">{card.title}</h2>
-            <p className="mt-2 text-sm text-slate-600">{card.description}</p>
+          <Link key={card.href} href={card.href}>
+            <Card className="h-full transition hover:-translate-y-0.5 hover:border-[var(--color-track)]">
+              <CardTitle>{card.title}</CardTitle>
+              <CardText className="mt-2">{card.description}</CardText>
+            </Card>
           </Link>
         ))}
       </div>

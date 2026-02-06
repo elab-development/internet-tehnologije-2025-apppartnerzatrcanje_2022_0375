@@ -6,8 +6,8 @@ export default async function ProfilePage() {
 
   return (
     <section className="space-y-6">
-      <h1 className="text-2xl font-semibold">Moj Profil</h1>
-      <p className="text-sm text-slate-600">Za sada je ovo samo frontend forma.</p>
+      <h1 className="text-3xl font-semibold text-[var(--color-ink)]">Moj Profil</h1>
+      <p className="text-sm text-[var(--color-muted)]">Za sada je ovo frontend forma sa test podacima.</p>
       <ProfileForm />
     </section>
   );

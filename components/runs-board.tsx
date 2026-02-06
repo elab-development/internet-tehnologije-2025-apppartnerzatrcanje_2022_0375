@@ -2,6 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { locations, runs, users } from "@/lib/mock-data";
+import { Card, CardText, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { InputField } from "@/components/ui/input-field";
 
 export function RunsBoard() {
   const [query, setQuery] = useState("");
@@ -20,27 +23,21 @@ export function RunsBoard() {
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-2">
-        <label className="block">
-          <span className="text-xs uppercase tracking-wide text-slate-500">Pretraga</span>
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Ruta, grad, naziv..."
-            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none ring-emerald-200 focus:ring"
-          />
-        </label>
-        <label className="block">
-          <span className="text-xs uppercase tracking-wide text-slate-500">Maks tempo (min/km)</span>
-          <input
-            type="number"
-            step="0.1"
-            value={maxPace}
-            onChange={(event) => setMaxPace(event.target.value)}
-            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none ring-emerald-200 focus:ring"
-          />
-        </label>
-      </div>
+      <Card className="grid gap-3 sm:grid-cols-2">
+        <InputField
+          label="Pretraga"
+          value={query}
+          placeholder="Ruta, grad, naziv..."
+          onChange={(event) => setQuery(event.target.value)}
+        />
+        <InputField
+          label="Maks tempo (min/km)"
+          type="number"
+          step="0.1"
+          value={maxPace}
+          onChange={(event) => setMaxPace(event.target.value)}
+        />
+      </Card>
 
       <div className="space-y-3">
         {filtered.map((run) => {
@@ -48,28 +45,26 @@ export function RunsBoard() {
           const location = locations.find((loc) => loc.locationId === run.locationId);
 
           return (
-            <article key={run.runId} className="rounded-xl border border-slate-200 bg-white p-5">
-              <h2 className="text-lg font-semibold">{run.title}</h2>
-              <p className="mt-1 text-sm text-slate-600">Ruta: {run.route}</p>
-              <p className="text-sm text-slate-600">Domaćin: {host?.username}</p>
-              <p className="text-sm text-slate-600">
+            <Card key={run.runId}>
+              <CardTitle>{run.title}</CardTitle>
+              <CardText className="mt-1">Ruta: {run.route}</CardText>
+              <CardText>Domaćin: {host?.username}</CardText>
+              <CardText>
                 Grad: {location?.city} ({location?.municipality})
-              </p>
-              <p className="text-sm text-slate-600">Dužina: {run.distanceKm} km</p>
-              <p className="text-sm text-slate-600">Tempo: {run.paceMinPerKm} min/km</p>
-              <p className="text-sm text-slate-600">
-                Početak: {new Date(run.startsAtIso).toLocaleString()}
-              </p>
-              <button className="mt-3 rounded-md border border-emerald-500 px-3 py-1.5 text-sm font-medium text-emerald-700 hover:bg-emerald-50">
-                Prijavi se na trening
-              </button>
-            </article>
+              </CardText>
+              <CardText>Dužina: {run.distanceKm} km</CardText>
+              <CardText>Tempo: {run.paceMinPerKm} min/km</CardText>
+              <CardText>Početak: {new Date(run.startsAtIso).toLocaleString()}</CardText>
+              <div className="mt-3">
+                <Button variant="secondary">Prijavi se na trening</Button>
+              </div>
+            </Card>
           );
         })}
         {filtered.length === 0 ? (
-          <p className="rounded-xl border border-slate-200 bg-white p-5 text-sm text-slate-600">
-            Nema treninga za izabrane filtere.
-          </p>
+          <Card>
+            <CardText>Nema treninga za izabrane filtere.</CardText>
+          </Card>
         ) : null}
       </div>
     </div>
