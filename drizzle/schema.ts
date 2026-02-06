@@ -3,14 +3,16 @@
 export const users = pgTable("users", {
   userId: serial("user_id").primaryKey(),
   email: varchar("email", { length: 255 }).notNull().unique(),
-  passwordHash: varchar("password_hash", { length: 255 }).notNull(),
-  username: varchar("username", { length: 100 }).notNull().unique(),
-  age: integer("age").notNull(),
-  gender: varchar("gender", { length: 20 }).notNull(),
-  fitnessLevel: varchar("fitness_level", { length: 20 }).notNull(),
-  runningPaceMinPerKm: real("running_pace_min_per_km").notNull(),
-  profileImage: text("profile_image"),
-  city: varchar("city", { length: 100 }).notNull(),
+  lozinkaHash: varchar("lozinka_hash", { length: 255 }).notNull(),
+  korisnickoIme: varchar("korisnicko_ime", { length: 100 }).notNull().unique(),
+  slikaKorisnika: text("slika_korisnika"),
+  starost: integer("starost").notNull(),
+  pol: varchar("pol", { length: 20 }).notNull(),
+  nivoKondicije: varchar("nivo_kondicije", { length: 20 }).notNull(),
+  tempoTrcanja: real("tempo_trcanja").notNull(),
+  role: varchar("role", { length: 20 }).notNull().default("runner"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const locations = pgTable("locations", {
