@@ -48,3 +48,12 @@ export const ratings = pgTable("ratings", {
   fromUserId: integer("from_user_id").notNull().references(() => users.userId),
   toUserId: integer("to_user_id").notNull().references(() => users.userId),
 });
+
+export const sessions = pgTable("sessions", {
+  sessionId: serial("session_id").primaryKey(),
+  sessionToken: varchar("session_token", { length: 255 }).notNull().unique(),
+  userId: integer("user_id").notNull().references(() => users.userId),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
