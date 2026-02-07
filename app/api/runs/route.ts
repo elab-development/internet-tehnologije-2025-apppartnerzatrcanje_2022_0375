@@ -23,13 +23,29 @@ const runsQuerySchema = z.object({
 });
 
 const createRunSchema = z.object({
-  title: z.string().trim().min(3).max(120),
-  route: z.string().trim().min(3),
-  startsAtIso: z.string().datetime(),
-  distanceKm: z.coerce.number().positive(),
-  paceMinPerKm: z.coerce.number().positive(),
-  city: z.string().trim().min(2).max(100),
-  municipality: z.string().trim().min(2).max(100),
+  title: z
+    .string()
+    .trim()
+    .min(3, "Naziv treninga mora imati najmanje 3 karaktera.")
+    .max(120, "Naziv treninga moze imati najvise 120 karaktera."),
+  route: z.string().trim().min(3, "Ruta mora imati najmanje 3 karaktera."),
+  startsAtIso: z.string().datetime("Datum i vreme pocetka nisu validni."),
+  distanceKm: z.coerce
+    .number({ message: "Duzina mora biti broj." })
+    .positive("Duzina mora biti veca od 0."),
+  paceMinPerKm: z.coerce
+    .number({ message: "Tempo mora biti broj." })
+    .positive("Tempo mora biti veci od 0."),
+  city: z
+    .string()
+    .trim()
+    .min(2, "Grad mora imati najmanje 2 karaktera.")
+    .max(100, "Grad moze imati najvise 100 karaktera."),
+  municipality: z
+    .string()
+    .trim()
+    .min(2, "Opstina mora imati najmanje 2 karaktera.")
+    .max(100, "Opstina moze imati najvise 100 karaktera."),
 });
 
 export async function GET(request: Request) {
@@ -182,7 +198,7 @@ export async function POST(request: Request) {
       return jsonError(
         {
           code: "VALIDATION_ERROR",
-          message: "Invalid run payload.",
+          message: "Podaci za kreiranje treninga nisu ispravni.",
           details: parsed.error.flatten(),
         },
         400
@@ -190,6 +206,27 @@ export async function POST(request: Request) {
     }
 
     const payload = parsed.data;
+    const startsAt = new Date(payload.startsAtIso);
+    if (Number.isNaN(startsAt.getTime())) {
+      return jsonError(
+        {
+          code: "VALIDATION_ERROR",
+          message: "Datum i vreme pocetka nisu validni.",
+        },
+        400
+      );
+    }
+
+    if (startsAt.getTime() <= Date.now()) {
+      return jsonError(
+        {
+          code: "VALIDATION_ERROR",
+          message: "Pocetak treninga mora biti u buducnosti.",
+        },
+        400
+      );
+    }
+
     const existingLocation = await db.query.locations.findFirst({
       where: and(eq(locations.city, payload.city), eq(locations.municipality, payload.municipality)),
       columns: { locationId: true },
@@ -214,7 +251,7 @@ export async function POST(request: Request) {
       .values({
         title: payload.title,
         route: payload.route,
-        startsAt: new Date(payload.startsAtIso),
+        startsAt,
         distanceKm: payload.distanceKm,
         paceMinPerKm: payload.paceMinPerKm,
         locationId,
@@ -235,7 +272,7 @@ export async function POST(request: Request) {
     return jsonError(
       {
         code: "INTERNAL_ERROR",
-        message: "Unexpected server error.",
+        message: "Doslo je do neocekivane greske na serveru.",
       },
       500
     );

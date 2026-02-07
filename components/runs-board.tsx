@@ -122,7 +122,15 @@ export function RunsBoard() {
 
             try {
               setIsCreatingRun(true);
-              const startsAtIso = new Date(createForm.startsAtLocal).toISOString();
+              if (!createForm.startsAtLocal) {
+                throw new Error("Unesi datum i vreme pocetka treninga.");
+              }
+              const startsAtDate = new Date(createForm.startsAtLocal);
+              if (Number.isNaN(startsAtDate.getTime())) {
+                throw new Error("Datum i vreme pocetka nisu validni.");
+              }
+              const startsAtIso = startsAtDate.toISOString();
+
               const response = await fetch("/api/runs", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -139,7 +147,14 @@ export function RunsBoard() {
               const payload = await response.json();
 
               if (!response.ok || !payload?.success) {
-                throw new Error(payload?.error?.message ?? "Neuspesno kreiranje treninga.");
+                const fieldErrors = payload?.error?.details?.fieldErrors as
+                  | Record<string, string[] | undefined>
+                  | undefined;
+                const firstFieldError = fieldErrors
+                  ? Object.values(fieldErrors).find((messages) => Array.isArray(messages) && messages.length > 0)?.[0]
+                  : undefined;
+
+                throw new Error(firstFieldError ?? payload?.error?.message ?? "Neuspesno kreiranje treninga.");
               }
 
               setCreateForm({

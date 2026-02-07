@@ -8,7 +8,7 @@ export default async function ChatPage() {
     <section className="space-y-6">
       <h1 className="text-3xl font-semibold text-[var(--color-ink)]">Moji Treninzi</h1>
       <p className="text-sm text-[var(--color-muted)]">
-        Pregled treninga u kojima učestvuješ i grupni chat za svaki trening.
+        Pregled treninga u kojima ucestvujes i grupni chat za svaki trening.
       </p>
       <ChatPanel />
     </section>

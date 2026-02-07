@@ -1,34 +1,133 @@
 "use client";
 
-import { useState } from "react";
-import { locations, messages, runs, users } from "@/lib/mock-data";
-import { Card, CardText } from "@/components/ui/card";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Card, CardText } from "@/components/ui/card";
 import { InputField, SelectField } from "@/components/ui/input-field";
 
-const CURRENT_USER_ID = "u1";
+type MyRun = {
+  runId: number;
+  title: string;
+  startsAtIso: string;
+  location: {
+    city: string;
+    municipality: string;
+  };
+  participantUserIds: number[];
+};
+
+type ChatMessage = {
+  messageId: number;
+  content: string;
+  sentAtIso: string;
+  fromUserId: number;
+  fromUsername: string;
+};
 
 export function ChatPanel() {
-  const myRuns = runs.filter((run) => run.participantUserIds.includes(CURRENT_USER_ID));
-  const [activeRunId, setActiveRunId] = useState(myRuns[0]?.runId ?? "");
+  const [runs, setRuns] = useState<MyRun[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const [activeRunId, setActiveRunId] = useState<number | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
-  const [localMessages, setLocalMessages] = useState(messages);
+  const [isLoadingRuns, setIsLoadingRuns] = useState(true);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const activeRun = myRuns.find((run) => run.runId === activeRunId);
-  const activeLocation = locations.find((location) => location.locationId === activeRun?.locationId);
+  const myRuns = useMemo(() => {
+    if (currentUserId === null) {
+      return [];
+    }
+    return runs.filter((run) => run.participantUserIds.includes(currentUserId));
+  }, [currentUserId, runs]);
 
-  const groupMessages = localMessages
-    .filter((message) => message.runId === activeRunId)
-    .map((message) => ({
-      ...message,
-      from: users.find((user) => user.userId === message.fromUserId)?.username ?? "Nepoznato",
-    }))
-    .sort((a, b) => a.sentAtIso.localeCompare(b.sentAtIso));
+  const activeRun = useMemo(() => myRuns.find((run) => run.runId === activeRunId) ?? null, [activeRunId, myRuns]);
 
-  if (!myRuns.length) {
+  const loadRuns = useCallback(async () => {
+    try {
+      setIsLoadingRuns(true);
+      setErrorMessage(null);
+
+      const response = await fetch("/api/runs", {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+      });
+      const payload = await response.json();
+
+      if (!response.ok || !payload?.success) {
+        throw new Error(payload?.error?.message ?? "Neuspesno ucitavanje treninga.");
+      }
+
+      const fetchedRuns = (payload.data.runs ?? []) as MyRun[];
+      const userId = (payload.data.currentUserId ?? null) as number | null;
+      const joinedRuns = userId === null ? [] : fetchedRuns.filter((run) => run.participantUserIds.includes(userId));
+
+      setRuns(fetchedRuns);
+      setCurrentUserId(userId);
+      setActiveRunId((current) => {
+        if (current && joinedRuns.some((run) => run.runId === current)) {
+          return current;
+        }
+        return joinedRuns[0]?.runId ?? null;
+      });
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Doslo je do greske.");
+    } finally {
+      setIsLoadingRuns(false);
+    }
+  }, []);
+
+  const loadMessages = useCallback(async () => {
+    if (!activeRunId) {
+      setMessages([]);
+      return;
+    }
+
+    try {
+      setIsLoadingMessages(true);
+      setErrorMessage(null);
+
+      const response = await fetch(`/api/chat/${activeRunId}/messages`, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+      });
+      const payload = await response.json();
+
+      if (!response.ok || !payload?.success) {
+        throw new Error(payload?.error?.message ?? "Neuspesno ucitavanje poruka.");
+      }
+
+      setMessages((payload.data.messages ?? []) as ChatMessage[]);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Doslo je do greske.");
+    } finally {
+      setIsLoadingMessages(false);
+    }
+  }, [activeRunId]);
+
+  useEffect(() => {
+    loadRuns();
+  }, [loadRuns]);
+
+  useEffect(() => {
+    loadMessages();
+  }, [loadMessages]);
+
+  if (isLoadingRuns) {
     return (
       <Card>
-        <CardText>Trenutno nisi član nijednog treninga.</CardText>
+        <CardText>Ucitavanje treninga...</CardText>
+      </Card>
+    );
+  }
+
+  if (myRuns.length === 0) {
+    return (
+      <Card>
+        <CardText>Trenutno nisi clan nijednog treninga.</CardText>
       </Card>
     );
   }
@@ -37,8 +136,8 @@ export function ChatPanel() {
     <Card className="space-y-4">
       <SelectField
         label="Izaberi trening"
-        value={activeRunId}
-        onChange={(event) => setActiveRunId(event.target.value)}
+        value={activeRunId ? String(activeRunId) : ""}
+        onChange={(event) => setActiveRunId(Number(event.target.value))}
       >
         {myRuns.map((run) => (
           <option key={run.runId} value={run.runId}>
@@ -51,47 +150,71 @@ export function ChatPanel() {
         <div className="rounded-xl border border-[var(--color-line)] bg-slate-50 p-3 text-sm text-[var(--color-muted)]">
           <p className="font-medium text-[var(--color-ink)]">{activeRun.title}</p>
           <p>
-            Lokacija: {activeLocation?.city} ({activeLocation?.municipality})
+            Lokacija: {activeRun.location.city} ({activeRun.location.municipality})
           </p>
-          <p>Početak: {new Date(activeRun.startsAtIso).toLocaleString()}</p>
+          <p>Pocetak: {new Date(activeRun.startsAtIso).toLocaleString()}</p>
         </div>
       ) : null}
 
+      {errorMessage ? (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{errorMessage}</div>
+      ) : null}
+
       <ul className="space-y-3">
-        {groupMessages.map((message) => (
-          <li key={message.messageId} className="rounded-xl border border-[var(--color-line)] bg-white p-3">
-            <p className="text-sm font-semibold text-[var(--color-ink)]">{message.from}</p>
-            <p className="mt-1 text-sm text-[var(--color-muted)]">{message.content}</p>
-          </li>
-        ))}
-        {groupMessages.length === 0 ? (
+        {isLoadingMessages ? (
           <li className="rounded-xl border border-[var(--color-line)] bg-white p-3 text-sm text-[var(--color-muted)]">
-            Još nema poruka u ovoj grupi.
+            Ucitavanje poruka...
+          </li>
+        ) : null}
+
+        {!isLoadingMessages &&
+          messages.map((message) => (
+            <li key={message.messageId} className="rounded-xl border border-[var(--color-line)] bg-white p-3">
+              <p className="text-sm font-semibold text-[var(--color-ink)]">{message.fromUsername}</p>
+              <p className="mt-1 text-sm text-[var(--color-muted)]">{message.content}</p>
+            </li>
+          ))}
+
+        {!isLoadingMessages && messages.length === 0 ? (
+          <li className="rounded-xl border border-[var(--color-line)] bg-white p-3 text-sm text-[var(--color-muted)]">
+            Jos nema poruka u ovoj grupi.
           </li>
         ) : null}
       </ul>
 
       <form
         className="flex gap-2"
-        onSubmit={(event) => {
+        onSubmit={async (event) => {
           event.preventDefault();
-          if (!draft.trim() || !activeRunId) return;
+          if (!activeRunId || !draft.trim()) {
+            return;
+          }
 
-          const recipientId =
-            activeRun?.participantUserIds.find((userId) => userId !== CURRENT_USER_ID) ?? "u2";
+          try {
+            setIsSending(true);
+            setErrorMessage(null);
 
-          setLocalMessages((current) => [
-            ...current,
-            {
-              messageId: `m-${Date.now()}`,
-              fromUserId: CURRENT_USER_ID,
-              toUserId: recipientId,
-              runId: activeRunId,
-              content: draft.trim(),
-              sentAtIso: new Date().toISOString(),
-            },
-          ]);
-          setDraft("");
+            const response = await fetch(`/api/chat/${activeRunId}/messages`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ content: draft }),
+            });
+            const payload = await response.json();
+            if (!response.ok || !payload?.success) {
+              const fieldErrors = payload?.error?.details?.fieldErrors as Record<string, string[] | undefined> | undefined;
+              const firstFieldError = fieldErrors
+                ? Object.values(fieldErrors).find((list) => Array.isArray(list) && list.length > 0)?.[0]
+                : undefined;
+              throw new Error(firstFieldError ?? payload?.error?.message ?? "Neuspesno slanje poruke.");
+            }
+
+            setDraft("");
+            await loadMessages();
+          } catch (error) {
+            setErrorMessage(error instanceof Error ? error.message : "Doslo je do greske.");
+          } finally {
+            setIsSending(false);
+          }
         }}
       >
         <InputField
@@ -99,9 +222,12 @@ export function ChatPanel() {
           value={draft}
           placeholder="Unesi poruku za grupu treninga..."
           onChange={(event) => setDraft(event.target.value)}
+          disabled={isSending}
         />
         <div className="pt-[22px]">
-          <Button type="submit">Pošalji</Button>
+          <Button type="submit" disabled={isSending}>
+            {isSending ? "Slanje..." : "Posalji"}
+          </Button>
         </div>
       </form>
     </Card>
