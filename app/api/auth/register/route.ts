@@ -6,14 +6,23 @@ import { db } from "@/lib/db";
 import { hashPassword } from "@/lib/password";
 
 const registerSchema = z.object({
-  email: z.email(),
+  email: z.string().trim().email(),
   password: z.string().min(6),
-  korisnickoIme: z.string().min(3).max(100),
-  slikaKorisnika: z.string().url().optional().nullable(),
-  starost: z.number().int().min(10).max(120),
-  pol: z.string().min(1).max(20),
-  nivoKondicije: z.string().min(1).max(20),
-  tempoTrcanja: z.number().positive(),
+  korisnickoIme: z.string().trim().min(3).max(100),
+  slikaKorisnika: z.preprocess(
+    (value) => {
+      if (typeof value !== "string") {
+        return value;
+      }
+      const trimmed = value.trim();
+      return trimmed.length === 0 ? null : trimmed;
+    },
+    z.string().url().nullable().optional()
+  ),
+  starost: z.coerce.number().int().min(10).max(120),
+  pol: z.enum(["muski", "zenski", "drugo"]),
+  nivoKondicije: z.enum(["pocetni", "srednji", "napredni"]),
+  tempoTrcanja: z.coerce.number().positive(),
   role: z.enum(["admin", "coach", "runner"]).optional(),
 });
 
@@ -26,7 +35,7 @@ export async function POST(request: Request) {
       return jsonError(
         {
           code: "VALIDATION_ERROR",
-          message: "Invalid register payload.",
+          message: "Neispravan unos pri registraciji.",
           details: parsed.error.flatten(),
         },
         400

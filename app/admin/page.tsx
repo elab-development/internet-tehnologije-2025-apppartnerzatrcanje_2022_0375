@@ -1,4 +1,4 @@
-import { requireAuth } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { Card } from "@/components/ui/card";
 
 const adminTasks = [
@@ -8,7 +8,7 @@ const adminTasks = [
 ];
 
 export default async function AdminPage() {
-  await requireAuth();
+  await requireAdmin();
 
   return (
     <section className="space-y-6">

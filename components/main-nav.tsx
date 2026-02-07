@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { cookies } from "next/headers";
+import { getAuthUser } from "@/lib/auth";
 import { LogoutButton } from "@/components/logout-button";
 
 const publicLinks = [
@@ -17,8 +17,8 @@ const privateLinks = [
 ];
 
 export async function MainNav() {
-  const cookieStore = await cookies();
-  const isAuthed = cookieStore.get("runly_auth")?.value === "1";
+  const user = await getAuthUser();
+  const isAuthed = Boolean(user);
   const links = isAuthed ? privateLinks : publicLinks;
 
   return (

@@ -7,37 +7,53 @@ import { Card } from "@/components/ui/card";
 import { InputField } from "@/components/ui/input-field";
 import { Button } from "@/components/ui/button";
 
-const MOCK_EMAIL = "demo@runly.com";
-const MOCK_PASSWORD = "runly123";
-
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: email.trim(),
+          password,
+        }),
+      });
+
+      const payload = (await response.json()) as {
+        success: boolean;
+        error?: { message?: string };
+      };
+
+      if (!response.ok || !payload.success) {
+        setError(payload.error?.message ?? "Neuspešna prijava.");
+        return;
+      }
+
+      router.push("/main");
+      router.refresh();
+    } catch {
+      setError("Greška na serveru. Pokušaj ponovo.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
 
   return (
     <section className="mx-auto max-w-md space-y-6">
       <h1 className="text-3xl font-semibold text-[var(--color-ink)]">Prijava</h1>
-      <Card className="border-[var(--color-track-soft)] bg-emerald-50">
-        <p className="text-sm text-emerald-800">
-          Test kredencijali: <strong>{MOCK_EMAIL}</strong> / <strong>{MOCK_PASSWORD}</strong>
-        </p>
-      </Card>
-      <form
-        className="space-y-3"
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (email.trim() === MOCK_EMAIL && password === MOCK_PASSWORD) {
-            setError("");
-            document.cookie = "runly_auth=1; path=/; samesite=lax";
-            router.push("/main");
-            router.refresh();
-            return;
-          }
-          setError("Neispravni test kredencijali.");
-        }}
-      >
+      <form className="space-y-3" onSubmit={onSubmit}>
         <Card className="space-y-3">
           <InputField
             label="Imejl"
@@ -52,8 +68,8 @@ export default function LoginPage() {
             onChange={(event) => setPassword(event.target.value)}
           />
           {error ? <p className="text-sm text-rose-600">{error}</p> : null}
-          <Button className="w-full" type="submit">
-            Prijavi se
+          <Button className="w-full" type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Prijava..." : "Prijavi se"}
           </Button>
         </Card>
       </form>
