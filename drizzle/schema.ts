@@ -32,6 +32,17 @@ export const runs = pgTable("runs", {
   hostUserId: integer("host_user_id").notNull().references(() => users.userId),
 });
 
+export const runUsers = pgTable("run_users", {
+  runUserId: serial("run_user_id").primaryKey(),
+  runId: integer("run_id")
+    .notNull()
+    .references(() => runs.runId),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.userId),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const messages = pgTable("messages", {
   messageId: serial("message_id").primaryKey(),
   content: text("content").notNull(),
