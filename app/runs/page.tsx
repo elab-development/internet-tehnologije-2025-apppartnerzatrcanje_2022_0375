@@ -7,7 +7,7 @@ export default async function RunsPage() {
   return (
     <section className="space-y-6">
       <h1 className="text-3xl font-semibold text-[var(--color-ink)]">Treninzi</h1>
-      <p className="text-sm text-[var(--color-muted)]">Pretraga i filter rade nad test podacima u frontendu.</p>
+      <p className="text-sm text-[var(--color-muted)]">Pretrazi treninge i prijavi se ili odjavi direktno iz baze.</p>
       <RunsBoard />
     </section>
   );
