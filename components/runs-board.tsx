@@ -24,6 +24,16 @@ type RunItem = {
   participantUserIds: number[];
 };
 
+type CreateRunForm = {
+  title: string;
+  route: string;
+  startsAtLocal: string;
+  distanceKm: string;
+  paceMinPerKm: string;
+  city: string;
+  municipality: string;
+};
+
 export function RunsBoard() {
   const [query, setQuery] = useState("");
   const [maxPace, setMaxPace] = useState("7");
@@ -31,8 +41,18 @@ export function RunsBoard() {
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmittingRunId, setIsSubmittingRunId] = useState<number | null>(null);
+  const [isCreatingRun, setIsCreatingRun] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [createForm, setCreateForm] = useState<CreateRunForm>({
+    title: "",
+    route: "",
+    startsAtLocal: "",
+    distanceKm: "",
+    paceMinPerKm: "",
+    city: "",
+    municipality: "",
+  });
 
   const queryString = useMemo(() => {
     const params = new URLSearchParams();
@@ -90,6 +110,109 @@ export function RunsBoard() {
           value={maxPace}
           onChange={(event) => setMaxPace(event.target.value)}
         />
+      </Card>
+      <Card>
+        <h2 className="text-lg font-semibold text-[var(--color-ink)]">Kreiraj trening</h2>
+        <form
+          className="mt-3 grid gap-3 sm:grid-cols-2"
+          onSubmit={async (event) => {
+            event.preventDefault();
+            setErrorMessage(null);
+            setSuccessMessage(null);
+
+            try {
+              setIsCreatingRun(true);
+              const startsAtIso = new Date(createForm.startsAtLocal).toISOString();
+              const response = await fetch("/api/runs", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  title: createForm.title,
+                  route: createForm.route,
+                  startsAtIso,
+                  distanceKm: Number(createForm.distanceKm),
+                  paceMinPerKm: Number(createForm.paceMinPerKm),
+                  city: createForm.city,
+                  municipality: createForm.municipality,
+                }),
+              });
+              const payload = await response.json();
+
+              if (!response.ok || !payload?.success) {
+                throw new Error(payload?.error?.message ?? "Neuspesno kreiranje treninga.");
+              }
+
+              setCreateForm({
+                title: "",
+                route: "",
+                startsAtLocal: "",
+                distanceKm: "",
+                paceMinPerKm: "",
+                city: "",
+                municipality: "",
+              });
+              setSuccessMessage("Trening je uspesno kreiran.");
+              await loadRuns();
+            } catch (error) {
+              setErrorMessage(error instanceof Error ? error.message : "Doslo je do greske.");
+            } finally {
+              setIsCreatingRun(false);
+            }
+          }}
+        >
+          <InputField
+            label="Naziv treninga"
+            value={createForm.title}
+            onChange={(event) => setCreateForm((current) => ({ ...current, title: event.target.value }))}
+            disabled={isCreatingRun}
+          />
+          <InputField
+            label="Ruta"
+            value={createForm.route}
+            onChange={(event) => setCreateForm((current) => ({ ...current, route: event.target.value }))}
+            disabled={isCreatingRun}
+          />
+          <InputField
+            label="Pocetak"
+            type="datetime-local"
+            value={createForm.startsAtLocal}
+            onChange={(event) => setCreateForm((current) => ({ ...current, startsAtLocal: event.target.value }))}
+            disabled={isCreatingRun}
+          />
+          <InputField
+            label="Duzina (km)"
+            type="number"
+            step="0.1"
+            value={createForm.distanceKm}
+            onChange={(event) => setCreateForm((current) => ({ ...current, distanceKm: event.target.value }))}
+            disabled={isCreatingRun}
+          />
+          <InputField
+            label="Tempo (min/km)"
+            type="number"
+            step="0.1"
+            value={createForm.paceMinPerKm}
+            onChange={(event) => setCreateForm((current) => ({ ...current, paceMinPerKm: event.target.value }))}
+            disabled={isCreatingRun}
+          />
+          <InputField
+            label="Grad"
+            value={createForm.city}
+            onChange={(event) => setCreateForm((current) => ({ ...current, city: event.target.value }))}
+            disabled={isCreatingRun}
+          />
+          <InputField
+            label="Opstina"
+            value={createForm.municipality}
+            onChange={(event) => setCreateForm((current) => ({ ...current, municipality: event.target.value }))}
+            disabled={isCreatingRun}
+          />
+          <div className="sm:col-span-2">
+            <Button type="submit" disabled={isCreatingRun}>
+              {isCreatingRun ? "Kreiranje..." : "Kreiraj trening"}
+            </Button>
+          </div>
+        </form>
       </Card>
 
       {errorMessage ? (

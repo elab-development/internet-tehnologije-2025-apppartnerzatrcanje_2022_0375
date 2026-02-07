@@ -22,6 +22,16 @@ const runsQuerySchema = z.object({
     }),
 });
 
+const createRunSchema = z.object({
+  title: z.string().trim().min(3).max(120),
+  route: z.string().trim().min(3),
+  startsAtIso: z.string().datetime(),
+  distanceKm: z.coerce.number().positive(),
+  paceMinPerKm: z.coerce.number().positive(),
+  city: z.string().trim().min(2).max(100),
+  municipality: z.string().trim().min(2).max(100),
+});
+
 export async function GET(request: Request) {
   try {
     const authUser = await getAuthUser();
@@ -141,6 +151,86 @@ export async function GET(request: Request) {
       runs: Array.from(runsMap.values()),
       currentUserId: authUser.userId,
     });
+  } catch {
+    return jsonError(
+      {
+        code: "INTERNAL_ERROR",
+        message: "Unexpected server error.",
+      },
+      500
+    );
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const authUser = await getAuthUser();
+    if (!authUser) {
+      return jsonError(
+        {
+          code: "UNAUTHORIZED",
+          message: "Not authenticated.",
+        },
+        401
+      );
+    }
+
+    const body = await request.json();
+    const parsed = createRunSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return jsonError(
+        {
+          code: "VALIDATION_ERROR",
+          message: "Invalid run payload.",
+          details: parsed.error.flatten(),
+        },
+        400
+      );
+    }
+
+    const payload = parsed.data;
+    const existingLocation = await db.query.locations.findFirst({
+      where: and(eq(locations.city, payload.city), eq(locations.municipality, payload.municipality)),
+      columns: { locationId: true },
+    });
+
+    let locationId = existingLocation?.locationId;
+    if (!locationId) {
+      const [createdLocation] = await db
+        .insert(locations)
+        .values({
+          city: payload.city,
+          municipality: payload.municipality,
+        })
+        .returning({
+          locationId: locations.locationId,
+        });
+      locationId = createdLocation.locationId;
+    }
+
+    const [createdRun] = await db
+      .insert(runs)
+      .values({
+        title: payload.title,
+        route: payload.route,
+        startsAt: new Date(payload.startsAtIso),
+        distanceKm: payload.distanceKm,
+        paceMinPerKm: payload.paceMinPerKm,
+        locationId,
+        hostUserId: authUser.userId,
+      })
+      .returning({
+        runId: runs.runId,
+        title: runs.title,
+      });
+
+    await db.insert(runUsers).values({
+      runId: createdRun.runId,
+      userId: authUser.userId,
+    });
+
+    return jsonSuccess({ run: createdRun }, 201);
   } catch {
     return jsonError(
       {
