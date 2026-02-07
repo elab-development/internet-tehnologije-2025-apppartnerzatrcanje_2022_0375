@@ -1,59 +1,141 @@
 "use client";
 
-import { useState } from "react";
-import { users } from "@/lib/mock-data";
+import { useEffect, useState } from "react";
 import type { FitnessLevel } from "@/lib/types";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { InputField, SelectField } from "@/components/ui/input-field";
 
 type Gender = "muski" | "zenski" | "drugo";
 
 type ProfileFormState = {
-  username: string;
+  korisnickoIme: string;
   age: string;
   gender: Gender;
   fitnessLevel: FitnessLevel;
   runningPaceMinPerKm: string;
-  city: string;
+  slikaKorisnika: string;
 };
 
 export function ProfileForm() {
-  const user = users[0];
   const [form, setForm] = useState<ProfileFormState>({
-    username: user.username,
-    age: String(user.age),
-    gender: user.gender,
-    fitnessLevel: user.fitnessLevel,
-    runningPaceMinPerKm: String(user.runningPaceMinPerKm),
-    city: user.city,
+    korisnickoIme: "",
+    age: "",
+    gender: "muski",
+    fitnessLevel: "pocetni",
+    runningPaceMinPerKm: "",
+    slikaKorisnika: "",
   });
-  const [saved, setSaved] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [savedMessage, setSavedMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadProfile() {
+      try {
+        setIsLoading(true);
+        setErrorMessage(null);
+
+        const response = await fetch("/api/profile/me", {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+          cache: "no-store",
+        });
+        const payload = await response.json();
+
+        if (!response.ok || !payload?.success) {
+          throw new Error(payload?.error?.message ?? "Neuspesno ucitavanje profila.");
+        }
+
+        const user = payload.data.user;
+        if (cancelled) {
+          return;
+        }
+
+        setForm({
+          korisnickoIme: user.korisnickoIme ?? "",
+          age: String(user.starost ?? ""),
+          gender: user.pol ?? "muski",
+          fitnessLevel: user.nivoKondicije ?? "pocetni",
+          runningPaceMinPerKm: String(user.tempoTrcanja ?? ""),
+          slikaKorisnika: user.slikaKorisnika ?? "",
+        });
+      } catch (error) {
+        if (!cancelled) {
+          setErrorMessage(error instanceof Error ? error.message : "Doslo je do greske.");
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    loadProfile();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <Card>
       <form
         className="grid gap-4 sm:grid-cols-2"
-        onSubmit={(event) => {
+        onSubmit={async (event) => {
           event.preventDefault();
-          setSaved(true);
+          setSavedMessage(null);
+          setErrorMessage(null);
+
+          try {
+            setIsSaving(true);
+            const response = await fetch("/api/profile/me", {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                korisnickoIme: form.korisnickoIme,
+                starost: Number(form.age),
+                pol: form.gender,
+                nivoKondicije: form.fitnessLevel,
+                tempoTrcanja: Number(form.runningPaceMinPerKm),
+                slikaKorisnika: form.slikaKorisnika.trim() === "" ? null : form.slikaKorisnika,
+              }),
+            });
+
+            const payload = await response.json();
+            if (!response.ok || !payload?.success) {
+              throw new Error(payload?.error?.message ?? "Neuspesno cuvanje profila.");
+            }
+
+            setSavedMessage("Profil je sacuvan.");
+          } catch (error) {
+            setErrorMessage(error instanceof Error ? error.message : "Doslo je do greske.");
+          } finally {
+            setIsSaving(false);
+          }
         }}
       >
         <InputField
-          label="Korisničko ime"
-          value={form.username}
-          onChange={(event) => setForm((current) => ({ ...current, username: event.target.value }))}
+          label="Korisnicko ime"
+          value={form.korisnickoIme}
+          onChange={(event) => setForm((current) => ({ ...current, korisnickoIme: event.target.value }))}
+          disabled={isLoading || isSaving}
         />
         <InputField
           label="Godine"
           type="number"
           value={form.age}
           onChange={(event) => setForm((current) => ({ ...current, age: event.target.value }))}
+          disabled={isLoading || isSaving}
         />
         <SelectField
           label="Pol"
           value={form.gender}
           onChange={(event) => setForm((current) => ({ ...current, gender: event.target.value as Gender }))}
+          disabled={isLoading || isSaving}
         >
           {["muski", "zenski", "drugo"].map((value) => (
             <option key={value} value={value}>
@@ -67,6 +149,7 @@ export function ProfileForm() {
           onChange={(event) =>
             setForm((current) => ({ ...current, fitnessLevel: event.target.value as FitnessLevel }))
           }
+          disabled={isLoading || isSaving}
         >
           {["pocetni", "srednji", "napredni"].map((value) => (
             <option key={value} value={value}>
@@ -79,18 +162,21 @@ export function ProfileForm() {
           type="number"
           step="0.1"
           value={form.runningPaceMinPerKm}
-          onChange={(event) =>
-            setForm((current) => ({ ...current, runningPaceMinPerKm: event.target.value }))
-          }
+          onChange={(event) => setForm((current) => ({ ...current, runningPaceMinPerKm: event.target.value }))}
+          disabled={isLoading || isSaving}
         />
         <InputField
-          label="Grad"
-          value={form.city}
-          onChange={(event) => setForm((current) => ({ ...current, city: event.target.value }))}
+          label="Slika korisnika (URL)"
+          value={form.slikaKorisnika}
+          onChange={(event) => setForm((current) => ({ ...current, slikaKorisnika: event.target.value }))}
+          disabled={isLoading || isSaving}
         />
         <div className="flex items-center gap-3 sm:col-span-2">
-          <Button type="submit">Sačuvaj profil</Button>
-          {saved ? <p className="text-sm text-[var(--color-track-strong)]">Sačuvano lokalno.</p> : null}
+          <Button type="submit" disabled={isLoading || isSaving}>
+            {isLoading ? "Ucitavanje..." : isSaving ? "Cuvanje..." : "Sacuvaj profil"}
+          </Button>
+          {savedMessage ? <p className="text-sm text-[var(--color-track-strong)]">{savedMessage}</p> : null}
+          {errorMessage ? <p className="text-sm text-rose-700">{errorMessage}</p> : null}
         </div>
       </form>
     </Card>
