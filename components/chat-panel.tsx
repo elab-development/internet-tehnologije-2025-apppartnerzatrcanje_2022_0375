@@ -24,6 +24,16 @@ type ChatMessage = {
   fromUsername: string;
 };
 
+function formatDateTime(value: string) {
+  const date = new Date(value);
+  const dd = String(date.getDate()).padStart(2, "0");
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const yyyy = date.getFullYear();
+  const hh = String(date.getHours()).padStart(2, "0");
+  const min = String(date.getMinutes()).padStart(2, "0");
+  return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
+}
+
 export function ChatPanel() {
   const [runs, setRuns] = useState<MyRun[]>([]);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
@@ -156,7 +166,7 @@ export function ChatPanel() {
           <p>
             Lokacija: {activeRun.location.city} ({activeRun.location.municipality})
           </p>
-          <p>Pocetak: {new Date(activeRun.startsAtIso).toLocaleString()}</p>
+          <p>Pocetak: {formatDateTime(activeRun.startsAtIso)}</p>
         </div>
       ) : null}
 
@@ -235,7 +245,12 @@ export function ChatPanel() {
                   </div>
                 </div>
               ) : (
-                <p className="mt-1 text-sm text-[var(--color-muted)]">{message.content}</p>
+                <>
+                  <p className="mt-1 text-sm text-[var(--color-muted)]">{message.content}</p>
+                  <p className="mt-1 text-xs text-[var(--color-muted)]">
+                    {formatDateTime(message.sentAtIso)}
+                  </p>
+                </>
               )}
               {currentUserId === message.fromUserId && editingMessageId !== message.messageId ? (
                 <div className="mt-2 flex gap-2">

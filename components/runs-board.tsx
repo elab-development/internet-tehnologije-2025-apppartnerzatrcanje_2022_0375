@@ -34,6 +34,16 @@ type CreateRunForm = {
   municipality: string;
 };
 
+function formatDateTime(value: string) {
+  const date = new Date(value);
+  const dd = String(date.getDate()).padStart(2, "0");
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const yyyy = date.getFullYear();
+  const hh = String(date.getHours()).padStart(2, "0");
+  const min = String(date.getMinutes()).padStart(2, "0");
+  return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
+}
+
 export function RunsBoard() {
   const [query, setQuery] = useState("");
   const [maxPace, setMaxPace] = useState("7");
@@ -390,7 +400,7 @@ export function RunsBoard() {
                       </CardText>
                       <CardText>Duzina: {run.distanceKm} km</CardText>
                       <CardText>Tempo: {run.paceMinPerKm} min/km</CardText>
-                      <CardText>Pocetak: {new Date(run.startsAtIso).toLocaleString()}</CardText>
+                      <CardText>Pocetak: {formatDateTime(run.startsAtIso)}</CardText>
                       <div className="mt-3 flex flex-wrap gap-2">
                         <Button
                           variant="secondary"

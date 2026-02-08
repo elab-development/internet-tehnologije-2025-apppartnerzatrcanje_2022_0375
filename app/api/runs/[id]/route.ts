@@ -141,9 +141,11 @@ export async function DELETE(_request: Request, context: RouteContext) {
       return jsonError({ code: "FORBIDDEN", message: "Samo kreator moze obrisati trening." }, 403);
     }
 
-    await db.delete(messages).where(eq(messages.runId, runId));
-    await db.delete(runUsers).where(eq(runUsers.runId, runId));
-    await db.delete(runs).where(eq(runs.runId, runId));
+    await db.transaction(async (tx) => {
+      await tx.delete(messages).where(eq(messages.runId, runId));
+      await tx.delete(runUsers).where(eq(runUsers.runId, runId));
+      await tx.delete(runs).where(eq(runs.runId, runId));
+    });
 
     return jsonSuccess({ deleted: true });
   } catch {
