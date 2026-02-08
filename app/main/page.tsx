@@ -82,7 +82,7 @@ export default async function MainPage() {
       <header className="rounded-3xl border border-[var(--color-track-soft)] bg-gradient-to-r from-[#3c7d6a] via-[#4a9a82] to-[#c98a72] p-8 text-center text-white">
         <h1 className="text-4xl font-bold tracking-tight">Runly Glavna Stranica</h1>
         <p className="mx-auto mt-3 max-w-2xl text-emerald-50">
-          Glavni moduli za pretragu partnera, treninge i grupne poruke.
+          Glavni moduli za pretragu partnera, treninge i grupne poruke
         </p>
       </header>
 
