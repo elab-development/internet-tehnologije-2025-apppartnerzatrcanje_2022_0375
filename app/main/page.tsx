@@ -40,6 +40,7 @@ function formatDateTime(value: string) {
 
 export default async function MainPage() {
   const authUser = await requireAuth();
+  const visibleCards = authUser.role === "admin" ? cards : cards.filter((card) => card.href !== "/admin");
   const now = new Date();
 
   const upcomingRows = await db
@@ -132,7 +133,7 @@ export default async function MainPage() {
       </Card>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {cards.map((card) => (
+        {visibleCards.map((card) => (
           <Link key={card.href} href={card.href}>
             <Card className="h-full transition hover:-translate-y-0.5 hover:border-[var(--color-track)]">
               <CardTitle>{card.title}</CardTitle>

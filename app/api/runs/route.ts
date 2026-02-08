@@ -140,6 +140,7 @@ export async function GET(request: Request) {
         host: { userId: number; korisnickoIme: string };
         participantUserIds: number[];
         ratedByCurrentUser: boolean;
+        currentUserRating: { ratingId: number; score: number; comment: string } | null;
       }
     >();
 
@@ -172,6 +173,7 @@ export async function GET(request: Request) {
         },
         participantUserIds: row.participantUserId !== null ? [row.participantUserId] : [],
         ratedByCurrentUser: false,
+        currentUserRating: null,
       });
     }
 
@@ -188,6 +190,27 @@ export async function GET(request: Request) {
         const run = runsMap.get(row.runId);
         if (run) {
           run.ratedByCurrentUser = true;
+        }
+      }
+
+      const currentUserRatingRows = await db
+        .select({
+          runId: ratings.runId,
+          ratingId: ratings.ratingId,
+          score: ratings.score,
+          comment: ratings.comment,
+        })
+        .from(ratings)
+        .where(and(eq(ratings.fromUserId, authUser.userId), inArray(ratings.runId, runIds)));
+
+      for (const row of currentUserRatingRows) {
+        const run = runsMap.get(row.runId);
+        if (run) {
+          run.currentUserRating = {
+            ratingId: row.ratingId,
+            score: row.score,
+            comment: row.comment,
+          };
         }
       }
     }

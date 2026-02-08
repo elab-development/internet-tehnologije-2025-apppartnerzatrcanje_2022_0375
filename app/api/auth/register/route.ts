@@ -23,7 +23,6 @@ const registerSchema = z.object({
   pol: z.enum(["muski", "zenski", "drugo"]),
   nivoKondicije: z.enum(["pocetni", "srednji", "napredni"]),
   tempoTrcanja: z.coerce.number().positive(),
-  role: z.enum(["admin", "coach", "runner"]).optional(),
 });
 
 export async function POST(request: Request) {
@@ -71,7 +70,7 @@ export async function POST(request: Request) {
         pol: payload.pol,
         nivoKondicije: payload.nivoKondicije,
         tempoTrcanja: payload.tempoTrcanja,
-        role: payload.role ?? "runner",
+        role: "runner",
       })
       .returning({
         userId: users.userId,

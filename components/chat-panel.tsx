@@ -19,6 +19,11 @@ type MyRun = {
   };
   participantUserIds: number[];
   ratedByCurrentUser: boolean;
+  currentUserRating: {
+    ratingId: number;
+    score: number;
+    comment: string;
+  } | null;
 };
 
 type ChatMessage = {
@@ -55,6 +60,9 @@ export function ChatPanel() {
   const [ratingScore, setRatingScore] = useState("5");
   const [ratingComment, setRatingComment] = useState("");
   const [isSubmittingRating, setIsSubmittingRating] = useState(false);
+  const [isEditingRating, setIsEditingRating] = useState(false);
+  const [isDeletingRating, setIsDeletingRating] = useState(false);
+  const [isRatingEditOpen, setIsRatingEditOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -183,8 +191,120 @@ export function ChatPanel() {
       {activeRun && currentUserId !== null && activeRun.host.userId !== currentUserId ? (
         <div className="rounded-xl border border-[var(--color-line)] bg-white p-3">
           <p className="text-xs uppercase tracking-wide text-[var(--color-muted)]">Ocena kreatora treninga</p>
-          {activeRun.ratedByCurrentUser ? (
-            <p className="mt-1 text-sm text-[var(--color-muted)]">Vec si ocenio kreatora ovog treninga.</p>
+          {activeRun.currentUserRating ? (
+            <div className="mt-2 space-y-2">
+              <p className="text-sm text-[var(--color-muted)]">
+                Tvoja ocena: <span className="font-semibold text-[var(--color-ink)]">{activeRun.currentUserRating.score}/5</span>
+              </p>
+              <p className="text-sm text-[var(--color-muted)]">{activeRun.currentUserRating.comment}</p>
+              {isRatingEditOpen ? (
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <InputField
+                    label="Ocena (1-5)"
+                    type="number"
+                    min="1"
+                    max="5"
+                    step="1"
+                    value={ratingScore}
+                    onChange={(event) => setRatingScore(event.target.value)}
+                    disabled={isEditingRating}
+                  />
+                  <InputField
+                    label="Komentar"
+                    value={ratingComment}
+                    onChange={(event) => setRatingComment(event.target.value)}
+                    disabled={isEditingRating}
+                  />
+                  <div className="flex gap-2 sm:col-span-2">
+                    <Button
+                      type="button"
+                      disabled={isEditingRating}
+                      onClick={async () => {
+                        try {
+                          setIsEditingRating(true);
+                          setErrorMessage(null);
+                          setSuccessMessage(null);
+                          const response = await fetch(`/api/ratings/${activeRun.currentUserRating?.ratingId}`, {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              score: Number(ratingScore),
+                              comment: ratingComment,
+                            }),
+                          });
+                          const payload = await response.json();
+                          if (!response.ok || !payload?.success) {
+                            throw new Error(payload?.error?.message ?? "Izmena ocene nije uspela.");
+                          }
+                          setSuccessMessage("Ocena je uspesno izmenjena.");
+                          setIsRatingEditOpen(false);
+                          await loadRuns();
+                        } catch (error) {
+                          setErrorMessage(error instanceof Error ? error.message : "Doslo je do greske.");
+                        } finally {
+                          setIsEditingRating(false);
+                        }
+                      }}
+                    >
+                      {isEditingRating ? "Cuvanje..." : "Sacuvaj izmenu"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      disabled={isEditingRating}
+                      onClick={() => {
+                        setIsRatingEditOpen(false);
+                        setRatingScore(String(activeRun.currentUserRating?.score ?? 5));
+                        setRatingComment(activeRun.currentUserRating?.comment ?? "");
+                      }}
+                    >
+                      Otkazi
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => {
+                      setIsRatingEditOpen(true);
+                      setRatingScore(String(activeRun.currentUserRating?.score ?? 5));
+                      setRatingComment(activeRun.currentUserRating?.comment ?? "");
+                    }}
+                  >
+                    Izmeni ocenu
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="danger"
+                    disabled={isDeletingRating}
+                    onClick={async () => {
+                      try {
+                        setIsDeletingRating(true);
+                        setErrorMessage(null);
+                        setSuccessMessage(null);
+                        const response = await fetch(`/api/ratings/${activeRun.currentUserRating?.ratingId}`, {
+                          method: "DELETE",
+                        });
+                        const payload = await response.json();
+                        if (!response.ok || !payload?.success) {
+                          throw new Error(payload?.error?.message ?? "Brisanje ocene nije uspelo.");
+                        }
+                        setSuccessMessage("Ocena je obrisana.");
+                        await loadRuns();
+                      } catch (error) {
+                        setErrorMessage(error instanceof Error ? error.message : "Doslo je do greske.");
+                      } finally {
+                        setIsDeletingRating(false);
+                      }
+                    }}
+                  >
+                    {isDeletingRating ? "Brisanje..." : "Obrisi ocenu"}
+                  </Button>
+                </div>
+              )}
+            </div>
           ) : (
             <div className="mt-2 grid gap-2 sm:grid-cols-2">
               <InputField

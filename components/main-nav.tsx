@@ -18,7 +18,12 @@ const privateLinks = [
 export async function MainNav() {
   const user = await getAuthUser();
   const isAuthed = Boolean(user);
-  const links = isAuthed ? privateLinks : publicLinks;
+  const links =
+    isAuthed && user
+      ? user.role === "admin"
+        ? [...privateLinks, { href: "/admin", label: "Admin" }]
+        : privateLinks
+      : publicLinks;
 
   return (
     <header className="sticky top-0 z-50 border-b border-[var(--color-track-soft)] bg-gradient-to-r from-white/95 via-emerald-50/95 to-orange-50/95 shadow-[0_10px_22px_rgba(16,33,43,0.08)] backdrop-blur">
