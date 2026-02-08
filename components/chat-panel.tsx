@@ -33,6 +33,10 @@ export function ChatPanel() {
   const [isLoadingRuns, setIsLoadingRuns] = useState(true);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [editingMessageId, setEditingMessageId] = useState<number | null>(null);
+  const [editingContent, setEditingContent] = useState("");
+  const [isEditingMessage, setIsEditingMessage] = useState(false);
+  const [deletingMessageId, setDeletingMessageId] = useState<number | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const myRuns = useMemo(() => {
@@ -171,7 +175,110 @@ export function ChatPanel() {
           messages.map((message) => (
             <li key={message.messageId} className="rounded-xl border border-[var(--color-line)] bg-white p-3">
               <p className="text-sm font-semibold text-[var(--color-ink)]">{message.fromUsername}</p>
-              <p className="mt-1 text-sm text-[var(--color-muted)]">{message.content}</p>
+              {editingMessageId === message.messageId ? (
+                <div className="mt-2 space-y-2">
+                  <InputField
+                    label="Izmeni poruku"
+                    value={editingContent}
+                    onChange={(event) => setEditingContent(event.target.value)}
+                    disabled={isEditingMessage}
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      disabled={isEditingMessage}
+                      onClick={async () => {
+                        if (!activeRunId) {
+                          return;
+                        }
+                        try {
+                          setIsEditingMessage(true);
+                          setErrorMessage(null);
+                          const response = await fetch(`/api/chat/${activeRunId}/messages/${message.messageId}`, {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ content: editingContent }),
+                          });
+                          const payload = await response.json();
+                          if (!response.ok || !payload?.success) {
+                            const fieldErrors = payload?.error?.details?.fieldErrors as
+                              | Record<string, string[] | undefined>
+                              | undefined;
+                            const firstFieldError = fieldErrors
+                              ? Object.values(fieldErrors).find((list) => Array.isArray(list) && list.length > 0)?.[0]
+                              : undefined;
+                            throw new Error(firstFieldError ?? payload?.error?.message ?? "Izmena poruke nije uspela.");
+                          }
+                          setEditingMessageId(null);
+                          setEditingContent("");
+                          await loadMessages();
+                        } catch (error) {
+                          setErrorMessage(error instanceof Error ? error.message : "Doslo je do greske.");
+                        } finally {
+                          setIsEditingMessage(false);
+                        }
+                      }}
+                    >
+                      {isEditingMessage ? "Cuvanje..." : "Sacuvaj"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      disabled={isEditingMessage}
+                      onClick={() => {
+                        setEditingMessageId(null);
+                        setEditingContent("");
+                      }}
+                    >
+                      Otkazi
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <p className="mt-1 text-sm text-[var(--color-muted)]">{message.content}</p>
+              )}
+              {currentUserId === message.fromUserId && editingMessageId !== message.messageId ? (
+                <div className="mt-2 flex gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => {
+                      setEditingMessageId(message.messageId);
+                      setEditingContent(message.content);
+                    }}
+                  >
+                    Izmeni
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="danger"
+                    disabled={deletingMessageId === message.messageId}
+                    onClick={async () => {
+                      if (!activeRunId) {
+                        return;
+                      }
+                      try {
+                        setDeletingMessageId(message.messageId);
+                        setErrorMessage(null);
+                        const response = await fetch(`/api/chat/${activeRunId}/messages/${message.messageId}`, {
+                          method: "DELETE",
+                        });
+                        const payload = await response.json();
+                        if (!response.ok || !payload?.success) {
+                          throw new Error(payload?.error?.message ?? "Brisanje poruke nije uspelo.");
+                        }
+                        await loadMessages();
+                      } catch (error) {
+                        setErrorMessage(error instanceof Error ? error.message : "Doslo je do greske.");
+                      } finally {
+                        setDeletingMessageId(null);
+                      }
+                    }}
+                  >
+                    {deletingMessageId === message.messageId ? "Brisanje..." : "Obrisi"}
+                  </Button>
+                </div>
+              ) : null}
             </li>
           ))}
 

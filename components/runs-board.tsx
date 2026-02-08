@@ -41,10 +41,22 @@ export function RunsBoard() {
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmittingRunId, setIsSubmittingRunId] = useState<number | null>(null);
+  const [isDeletingRunId, setIsDeletingRunId] = useState<number | null>(null);
+  const [editingRunId, setEditingRunId] = useState<number | null>(null);
+  const [isUpdatingRun, setIsUpdatingRun] = useState(false);
   const [isCreatingRun, setIsCreatingRun] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [createForm, setCreateForm] = useState<CreateRunForm>({
+    title: "",
+    route: "",
+    startsAtLocal: "",
+    distanceKm: "",
+    paceMinPerKm: "",
+    city: "",
+    municipality: "",
+  });
+  const [editForm, setEditForm] = useState<CreateRunForm>({
     title: "",
     route: "",
     startsAtLocal: "",
@@ -251,57 +263,224 @@ export function RunsBoard() {
         {!isLoading
           ? runs.map((run) => {
               const isJoined = currentUserId !== null && run.participantUserIds.includes(currentUserId);
+              const isCreator = currentUserId !== null && run.host.userId === currentUserId;
+              const isEditingThisRun = editingRunId === run.runId;
 
               return (
                 <Card key={run.runId}>
-                  <CardTitle>{run.title}</CardTitle>
-                  <CardText className="mt-1">Ruta: {run.route}</CardText>
-                  <CardText>Domacin: {run.host.korisnickoIme}</CardText>
-                  <CardText>
-                    Grad: {run.location.city} ({run.location.municipality})
-                  </CardText>
-                  <CardText>Duzina: {run.distanceKm} km</CardText>
-                  <CardText>Tempo: {run.paceMinPerKm} min/km</CardText>
-                  <CardText>Pocetak: {new Date(run.startsAtIso).toLocaleString()}</CardText>
-                  <div className="mt-3">
-                    <Button
-                      variant="secondary"
-                      disabled={isSubmittingRunId === run.runId}
-                      onClick={async () => {
+                  {isEditingThisRun ? (
+                    <form
+                      className="grid gap-3 sm:grid-cols-2"
+                      onSubmit={async (event) => {
+                        event.preventDefault();
                         try {
-                          setIsSubmittingRunId(run.runId);
+                          setIsUpdatingRun(true);
                           setErrorMessage(null);
                           setSuccessMessage(null);
-
-                          const endpoint = isJoined ? "leave" : "join";
-                          const response = await fetch(`/api/runs/${run.runId}/${endpoint}`, {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                          });
-                          const payload = await response.json();
-
-                          if (!response.ok || !payload?.success) {
-                            throw new Error(payload?.error?.message ?? "Promena prijave nije uspela.");
+                          if (!editForm.startsAtLocal) {
+                            throw new Error("Unesi datum i vreme pocetka treninga.");
+                          }
+                          const startsAtDate = new Date(editForm.startsAtLocal);
+                          if (Number.isNaN(startsAtDate.getTime())) {
+                            throw new Error("Datum i vreme pocetka nisu validni.");
                           }
 
-                          setSuccessMessage(
-                            isJoined ? "Uspesno ste se odjavili sa treninga." : "Uspesno ste prijavljeni na trening."
-                          );
+                          const response = await fetch(`/api/runs/${run.runId}`, {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              title: editForm.title,
+                              route: editForm.route,
+                              startsAtIso: startsAtDate.toISOString(),
+                              distanceKm: Number(editForm.distanceKm),
+                              paceMinPerKm: Number(editForm.paceMinPerKm),
+                              city: editForm.city,
+                              municipality: editForm.municipality,
+                            }),
+                          });
+                          const payload = await response.json();
+                          if (!response.ok || !payload?.success) {
+                            const fieldErrors = payload?.error?.details?.fieldErrors as
+                              | Record<string, string[] | undefined>
+                              | undefined;
+                            const firstFieldError = fieldErrors
+                              ? Object.values(fieldErrors).find((messages) => Array.isArray(messages) && messages.length > 0)?.[0]
+                              : undefined;
+                            throw new Error(firstFieldError ?? payload?.error?.message ?? "Izmena treninga nije uspela.");
+                          }
+
+                          setEditingRunId(null);
+                          setSuccessMessage("Trening je uspesno izmenjen.");
                           await loadRuns();
                         } catch (error) {
                           setErrorMessage(error instanceof Error ? error.message : "Doslo je do greske.");
                         } finally {
-                          setIsSubmittingRunId(null);
+                          setIsUpdatingRun(false);
                         }
                       }}
                     >
-                      {isSubmittingRunId === run.runId
-                        ? "Obrada..."
-                        : isJoined
-                          ? "Odjavi se sa treninga"
-                          : "Prijavi se na trening"}
-                    </Button>
-                  </div>
+                      <InputField
+                        label="Naziv treninga"
+                        value={editForm.title}
+                        onChange={(event) => setEditForm((current) => ({ ...current, title: event.target.value }))}
+                        disabled={isUpdatingRun}
+                      />
+                      <InputField
+                        label="Ruta"
+                        value={editForm.route}
+                        onChange={(event) => setEditForm((current) => ({ ...current, route: event.target.value }))}
+                        disabled={isUpdatingRun}
+                      />
+                      <InputField
+                        label="Pocetak"
+                        type="datetime-local"
+                        value={editForm.startsAtLocal}
+                        onChange={(event) => setEditForm((current) => ({ ...current, startsAtLocal: event.target.value }))}
+                        disabled={isUpdatingRun}
+                      />
+                      <InputField
+                        label="Duzina (km)"
+                        type="number"
+                        step="0.1"
+                        value={editForm.distanceKm}
+                        onChange={(event) => setEditForm((current) => ({ ...current, distanceKm: event.target.value }))}
+                        disabled={isUpdatingRun}
+                      />
+                      <InputField
+                        label="Tempo (min/km)"
+                        type="number"
+                        step="0.1"
+                        value={editForm.paceMinPerKm}
+                        onChange={(event) => setEditForm((current) => ({ ...current, paceMinPerKm: event.target.value }))}
+                        disabled={isUpdatingRun}
+                      />
+                      <InputField
+                        label="Grad"
+                        value={editForm.city}
+                        onChange={(event) => setEditForm((current) => ({ ...current, city: event.target.value }))}
+                        disabled={isUpdatingRun}
+                      />
+                      <InputField
+                        label="Opstina"
+                        value={editForm.municipality}
+                        onChange={(event) => setEditForm((current) => ({ ...current, municipality: event.target.value }))}
+                        disabled={isUpdatingRun}
+                      />
+                      <div className="flex gap-2 sm:col-span-2">
+                        <Button type="submit" disabled={isUpdatingRun}>
+                          {isUpdatingRun ? "Cuvanje..." : "Sacuvaj izmene"}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          disabled={isUpdatingRun}
+                          onClick={() => setEditingRunId(null)}
+                        >
+                          Otkazi
+                        </Button>
+                      </div>
+                    </form>
+                  ) : (
+                    <>
+                      <CardTitle>{run.title}</CardTitle>
+                      <CardText className="mt-1">Ruta: {run.route}</CardText>
+                      <CardText>Domacin: {run.host.korisnickoIme}</CardText>
+                      <CardText>
+                        Grad: {run.location.city} ({run.location.municipality})
+                      </CardText>
+                      <CardText>Duzina: {run.distanceKm} km</CardText>
+                      <CardText>Tempo: {run.paceMinPerKm} min/km</CardText>
+                      <CardText>Pocetak: {new Date(run.startsAtIso).toLocaleString()}</CardText>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <Button
+                          variant="secondary"
+                          disabled={isSubmittingRunId === run.runId}
+                          onClick={async () => {
+                            try {
+                              setIsSubmittingRunId(run.runId);
+                              setErrorMessage(null);
+                              setSuccessMessage(null);
+
+                              const endpoint = isJoined ? "leave" : "join";
+                              const response = await fetch(`/api/runs/${run.runId}/${endpoint}`, {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                              });
+                              const payload = await response.json();
+
+                              if (!response.ok || !payload?.success) {
+                                throw new Error(payload?.error?.message ?? "Promena prijave nije uspela.");
+                              }
+
+                              setSuccessMessage(
+                                isJoined ? "Uspesno ste se odjavili sa treninga." : "Uspesno ste prijavljeni na trening."
+                              );
+                              await loadRuns();
+                            } catch (error) {
+                              setErrorMessage(error instanceof Error ? error.message : "Doslo je do greske.");
+                            } finally {
+                              setIsSubmittingRunId(null);
+                            }
+                          }}
+                        >
+                          {isSubmittingRunId === run.runId
+                            ? "Obrada..."
+                            : isJoined
+                              ? "Odjavi se sa treninga"
+                              : "Prijavi se na trening"}
+                        </Button>
+                        {isCreator ? (
+                          <>
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              onClick={() => {
+                                const startsAt = new Date(run.startsAtIso);
+                                const localValue = `${startsAt.getFullYear()}-${String(startsAt.getMonth() + 1).padStart(2, "0")}-${String(startsAt.getDate()).padStart(2, "0")}T${String(startsAt.getHours()).padStart(2, "0")}:${String(startsAt.getMinutes()).padStart(2, "0")}`;
+                                setEditForm({
+                                  title: run.title,
+                                  route: run.route,
+                                  startsAtLocal: localValue,
+                                  distanceKm: String(run.distanceKm),
+                                  paceMinPerKm: String(run.paceMinPerKm),
+                                  city: run.location.city,
+                                  municipality: run.location.municipality,
+                                });
+                                setEditingRunId(run.runId);
+                              }}
+                            >
+                              Izmeni trening
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="danger"
+                              disabled={isDeletingRunId === run.runId}
+                              onClick={async () => {
+                                try {
+                                  setIsDeletingRunId(run.runId);
+                                  setErrorMessage(null);
+                                  setSuccessMessage(null);
+                                  const response = await fetch(`/api/runs/${run.runId}`, { method: "DELETE" });
+                                  const payload = await response.json();
+                                  if (!response.ok || !payload?.success) {
+                                    throw new Error(payload?.error?.message ?? "Brisanje treninga nije uspelo.");
+                                  }
+                                  setSuccessMessage("Trening je uspesno obrisan.");
+                                  await loadRuns();
+                                } catch (error) {
+                                  setErrorMessage(error instanceof Error ? error.message : "Doslo je do greske.");
+                                } finally {
+                                  setIsDeletingRunId(null);
+                                }
+                              }}
+                            >
+                              {isDeletingRunId === run.runId ? "Brisanje..." : "Obrisi trening"}
+                            </Button>
+                          </>
+                        ) : null}
+                      </div>
+                    </>
+                  )}
                 </Card>
               );
             })
