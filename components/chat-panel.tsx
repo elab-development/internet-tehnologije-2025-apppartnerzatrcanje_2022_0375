@@ -13,7 +13,12 @@ type MyRun = {
     city: string;
     municipality: string;
   };
+  host: {
+    userId: number;
+    korisnickoIme: string;
+  };
   participantUserIds: number[];
+  ratedByCurrentUser: boolean;
 };
 
 type ChatMessage = {
@@ -47,6 +52,10 @@ export function ChatPanel() {
   const [editingContent, setEditingContent] = useState("");
   const [isEditingMessage, setIsEditingMessage] = useState(false);
   const [deletingMessageId, setDeletingMessageId] = useState<number | null>(null);
+  const [ratingScore, setRatingScore] = useState("5");
+  const [ratingComment, setRatingComment] = useState("");
+  const [isSubmittingRating, setIsSubmittingRating] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const myRuns = useMemo(() => {
@@ -163,11 +172,80 @@ export function ChatPanel() {
       {activeRun ? (
         <div className="rounded-xl border border-[var(--color-line)] bg-slate-50 p-3 text-sm text-[var(--color-muted)]">
           <p className="font-medium text-[var(--color-ink)]">{activeRun.title}</p>
+          <p>Domacin: {activeRun.host.korisnickoIme}</p>
           <p>
             Lokacija: {activeRun.location.city} ({activeRun.location.municipality})
           </p>
           <p>Pocetak: {formatDateTime(activeRun.startsAtIso)}</p>
         </div>
+      ) : null}
+
+      {activeRun && currentUserId !== null && activeRun.host.userId !== currentUserId ? (
+        <div className="rounded-xl border border-[var(--color-line)] bg-white p-3">
+          <p className="text-xs uppercase tracking-wide text-[var(--color-muted)]">Ocena kreatora treninga</p>
+          {activeRun.ratedByCurrentUser ? (
+            <p className="mt-1 text-sm text-[var(--color-muted)]">Vec si ocenio kreatora ovog treninga.</p>
+          ) : (
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              <InputField
+                label="Ocena (1-5)"
+                type="number"
+                min="1"
+                max="5"
+                step="1"
+                value={ratingScore}
+                onChange={(event) => setRatingScore(event.target.value)}
+                disabled={isSubmittingRating}
+              />
+              <InputField
+                label="Komentar"
+                value={ratingComment}
+                onChange={(event) => setRatingComment(event.target.value)}
+                disabled={isSubmittingRating}
+              />
+              <div className="sm:col-span-2">
+                <Button
+                  type="button"
+                  disabled={isSubmittingRating}
+                  onClick={async () => {
+                    try {
+                      setIsSubmittingRating(true);
+                      setErrorMessage(null);
+                      setSuccessMessage(null);
+                      const response = await fetch("/api/ratings", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          runId: activeRun.runId,
+                          score: Number(ratingScore),
+                          comment: ratingComment,
+                        }),
+                      });
+                      const payload = await response.json();
+                      if (!response.ok || !payload?.success) {
+                        throw new Error(payload?.error?.message ?? "Ocena nije uspesno sacuvana.");
+                      }
+                      setSuccessMessage("Ocena kreatora je uspesno sacuvana.");
+                      setRatingComment("");
+                      setRatingScore("5");
+                      await loadRuns();
+                    } catch (error) {
+                      setErrorMessage(error instanceof Error ? error.message : "Doslo je do greske.");
+                    } finally {
+                      setIsSubmittingRating(false);
+                    }
+                  }}
+                >
+                  {isSubmittingRating ? "Slanje..." : "Oceni kreatora"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : null}
+
+      {successMessage ? (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">{successMessage}</div>
       ) : null}
 
       {errorMessage ? (

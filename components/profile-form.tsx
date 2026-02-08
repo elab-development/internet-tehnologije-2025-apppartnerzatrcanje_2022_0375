@@ -30,6 +30,10 @@ export function ProfileForm() {
   const [isSaving, setIsSaving] = useState(false);
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [creatorRating, setCreatorRating] = useState<{ average: number | null; total: number }>({
+    average: null,
+    total: 0,
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -51,6 +55,7 @@ export function ProfileForm() {
         }
 
         const user = payload.data.user;
+        const rating = payload.data.creatorRating as { average: number | null; total: number } | undefined;
         if (cancelled) {
           return;
         }
@@ -62,6 +67,10 @@ export function ProfileForm() {
           fitnessLevel: user.nivoKondicije ?? "pocetni",
           runningPaceMinPerKm: String(user.tempoTrcanja ?? ""),
           slikaKorisnika: user.slikaKorisnika ?? "",
+        });
+        setCreatorRating({
+          average: rating?.average ?? null,
+          total: rating?.total ?? 0,
         });
       } catch (error) {
         if (!cancelled) {
@@ -118,6 +127,12 @@ export function ProfileForm() {
           }
         }}
       >
+        <div className="rounded-md border border-[var(--color-line)] bg-[var(--color-paper)] p-3 sm:col-span-2">
+          <p className="text-xs uppercase tracking-wide text-[var(--color-muted)]">Prosecna ocena kao kreator</p>
+          <p className="text-sm font-medium text-[var(--color-ink)]">
+            {creatorRating.average !== null ? `${creatorRating.average}/5 (${creatorRating.total})` : "Jos nema ocena"}
+          </p>
+        </div>
         <InputField
           label="Korisnicko ime"
           value={form.korisnickoIme}

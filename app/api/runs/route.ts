@@ -1,6 +1,6 @@
-import { and, asc, eq, lte, or, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, lte, or, sql } from "drizzle-orm";
 import { z } from "zod";
-import { locations, runUsers, runs, users } from "@/drizzle/schema";
+import { locations, ratings, runUsers, runs, users } from "@/drizzle/schema";
 import { jsonError, jsonSuccess } from "@/lib/api/response";
 import { getAuthUser } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -139,6 +139,7 @@ export async function GET(request: Request) {
         location: { locationId: number; city: string; municipality: string; lat: number | null; lng: number | null };
         host: { userId: number; korisnickoIme: string };
         participantUserIds: number[];
+        ratedByCurrentUser: boolean;
       }
     >();
 
@@ -170,7 +171,25 @@ export async function GET(request: Request) {
           korisnickoIme: row.hostUsername,
         },
         participantUserIds: row.participantUserId !== null ? [row.participantUserId] : [],
+        ratedByCurrentUser: false,
       });
+    }
+
+    const runIds = Array.from(runsMap.keys());
+    if (runIds.length > 0) {
+      const currentUserRatings = await db
+        .select({
+          runId: ratings.runId,
+        })
+        .from(ratings)
+        .where(and(eq(ratings.fromUserId, authUser.userId), inArray(ratings.runId, runIds)));
+
+      for (const row of currentUserRatings) {
+        const run = runsMap.get(row.runId);
+        if (run) {
+          run.ratedByCurrentUser = true;
+        }
+      }
     }
 
     return jsonSuccess({

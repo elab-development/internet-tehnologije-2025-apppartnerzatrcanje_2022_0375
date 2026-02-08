@@ -58,6 +58,7 @@ export const ratings = pgTable("ratings", {
   ratingId: serial("rating_id").primaryKey(),
   score: integer("score").notNull(),
   comment: text("comment").notNull(),
+  runId: integer("run_id").notNull().references(() => runs.runId),
   fromUserId: integer("from_user_id").notNull().references(() => users.userId),
   toUserId: integer("to_user_id").notNull().references(() => users.userId),
 });

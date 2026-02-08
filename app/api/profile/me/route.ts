@@ -1,7 +1,7 @@
 import { and, eq, gt, ne } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { z } from "zod";
-import { sessions, users } from "@/drizzle/schema";
+import { ratings, sessions, users } from "@/drizzle/schema";
 import { jsonError, jsonSuccess } from "@/lib/api/response";
 import { db } from "@/lib/db";
 import { SESSION_COOKIE_NAME } from "@/lib/session";
@@ -78,7 +78,22 @@ export async function GET() {
       );
     }
 
-    return jsonSuccess({ user });
+    const receivedRatings = await db
+      .select({
+        score: ratings.score,
+      })
+      .from(ratings)
+      .where(eq(ratings.toUserId, userId));
+
+    const creatorRating =
+      receivedRatings.length > 0
+        ? {
+            average: Number((receivedRatings.reduce((sum, row) => sum + row.score, 0) / receivedRatings.length).toFixed(2)),
+            total: receivedRatings.length,
+          }
+        : { average: null, total: 0 };
+
+    return jsonSuccess({ user, creatorRating });
   } catch {
     return jsonError(
       {
