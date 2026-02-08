@@ -33,6 +33,8 @@ const updateRunSchema = z.object({
     .trim()
     .min(2, "Opstina mora imati najmanje 2 karaktera.")
     .max(100, "Opstina moze imati najvise 100 karaktera."),
+  lat: z.coerce.number().min(-90).max(90).optional(),
+  lng: z.coerce.number().min(-180).max(180).optional(),
 });
 
 export async function PATCH(request: Request, context: RouteContext) {
@@ -91,9 +93,19 @@ export async function PATCH(request: Request, context: RouteContext) {
         .values({
           city: parsed.data.city,
           municipality: parsed.data.municipality,
+          lat: parsed.data.lat ?? null,
+          lng: parsed.data.lng ?? null,
         })
         .returning({ locationId: locations.locationId });
       locationId = createdLocation.locationId;
+    } else if (parsed.data.lat !== undefined && parsed.data.lng !== undefined) {
+      await db
+        .update(locations)
+        .set({
+          lat: parsed.data.lat,
+          lng: parsed.data.lng,
+        })
+        .where(eq(locations.locationId, locationId));
     }
 
     const [updated] = await db

@@ -12,7 +12,6 @@ const privateLinks = [
   { href: "/main", label: "Glavna" },
   { href: "/profile", label: "Profil" },
   { href: "/runs", label: "Treninzi" },
-  { href: "/map", label: "Mapa" },
   { href: "/chat", label: "Moji Treninzi" },
 ];
 

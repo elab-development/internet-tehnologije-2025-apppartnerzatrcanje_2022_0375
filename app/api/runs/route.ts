@@ -46,6 +46,12 @@ const createRunSchema = z.object({
     .trim()
     .min(2, "Opstina mora imati najmanje 2 karaktera.")
     .max(100, "Opstina moze imati najvise 100 karaktera."),
+  lat: z.coerce.number().min(-90, "Latitude mora biti izmedju -90 i 90.").max(90, "Latitude mora biti izmedju -90 i 90."),
+  lng: z
+    .coerce
+    .number()
+    .min(-180, "Longitude mora biti izmedju -180 i 180.")
+    .max(180, "Longitude mora biti izmedju -180 i 180."),
 });
 
 export async function GET(request: Request) {
@@ -108,6 +114,8 @@ export async function GET(request: Request) {
         locationId: runs.locationId,
         locationCity: locations.city,
         locationMunicipality: locations.municipality,
+        locationLat: locations.lat,
+        locationLng: locations.lng,
         hostUserId: users.userId,
         hostUsername: users.korisnickoIme,
         participantUserId: runUsers.userId,
@@ -128,7 +136,7 @@ export async function GET(request: Request) {
         startsAtIso: string;
         distanceKm: number;
         paceMinPerKm: number;
-        location: { locationId: number; city: string; municipality: string };
+        location: { locationId: number; city: string; municipality: string; lat: number | null; lng: number | null };
         host: { userId: number; korisnickoIme: string };
         participantUserIds: number[];
       }
@@ -154,6 +162,8 @@ export async function GET(request: Request) {
           locationId: row.locationId,
           city: row.locationCity,
           municipality: row.locationMunicipality,
+          lat: row.locationLat,
+          lng: row.locationLng,
         },
         host: {
           userId: row.hostUserId,
@@ -229,7 +239,7 @@ export async function POST(request: Request) {
 
     const existingLocation = await db.query.locations.findFirst({
       where: and(eq(locations.city, payload.city), eq(locations.municipality, payload.municipality)),
-      columns: { locationId: true },
+      columns: { locationId: true, lat: true, lng: true },
     });
 
     let locationId = existingLocation?.locationId;
@@ -239,11 +249,21 @@ export async function POST(request: Request) {
         .values({
           city: payload.city,
           municipality: payload.municipality,
+          lat: payload.lat ?? null,
+          lng: payload.lng ?? null,
         })
         .returning({
           locationId: locations.locationId,
         });
       locationId = createdLocation.locationId;
+    } else if (payload.lat !== undefined && payload.lng !== undefined) {
+      await db
+        .update(locations)
+        .set({
+          lat: payload.lat,
+          lng: payload.lng,
+        })
+        .where(eq(locations.locationId, locationId));
     }
 
     const [createdRun] = await db

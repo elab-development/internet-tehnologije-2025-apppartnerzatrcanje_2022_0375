@@ -19,6 +19,8 @@ export const locations = pgTable("locations", {
   locationId: serial("location_id").primaryKey(),
   city: varchar("city", { length: 100 }).notNull(),
   municipality: varchar("municipality", { length: 100 }).notNull(),
+  lat: real("lat"),
+  lng: real("lng"),
 });
 
 export const runs = pgTable("runs", {
