@@ -22,6 +22,13 @@
       "when": 1770567018602,
       "tag": "0002_chilly_jamie_braddock",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1770571769037,
+      "tag": "0003_messy_doctor_doom",
+      "breakpoints": true
     }
   ]
 }

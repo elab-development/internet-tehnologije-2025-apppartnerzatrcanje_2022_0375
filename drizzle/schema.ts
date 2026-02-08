@@ -6,7 +6,6 @@ export const users = pgTable("users", {
   lozinkaHash: varchar("lozinka_hash", { length: 255 }).notNull(),
   korisnickoIme: varchar("korisnicko_ime", { length: 100 }).notNull().unique(),
   slikaKorisnika: text("slika_korisnika"),
-  bio: text("bio"),
   starost: integer("starost").notNull(),
   pol: varchar("pol", { length: 20 }).notNull(),
   nivoKondicije: varchar("nivo_kondicije", { length: 20 }).notNull(),
