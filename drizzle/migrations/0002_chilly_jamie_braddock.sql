@@ -1,0 +1,1 @@
+ALTER TABLE "run_users" ADD CONSTRAINT "run_users_run_id_user_id_unique" UNIQUE("run_id","user_id");

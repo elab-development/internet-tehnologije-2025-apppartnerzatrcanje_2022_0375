@@ -1,22 +1,13 @@
 import { eq } from "drizzle-orm";
-import { z } from "zod";
 import { ratings } from "@/drizzle/schema";
 import { jsonError, jsonSuccess } from "@/lib/api/response";
 import { getAuthUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { updateRatingSchema } from "@/lib/validation/ratings";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
 };
-
-const updateRatingSchema = z.object({
-  score: z.coerce.number().int().min(1, "Ocena mora biti od 1 do 5.").max(5, "Ocena mora biti od 1 do 5."),
-  comment: z
-    .string()
-    .trim()
-    .min(1, "Komentar je obavezan.")
-    .max(1000, "Komentar moze imati najvise 1000 karaktera."),
-});
 
 export async function PATCH(request: Request, context: RouteContext) {
   try {

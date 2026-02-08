@@ -1,4 +1,4 @@
-﻿import { pgTable, varchar, timestamp, integer, text, serial, real } from "drizzle-orm/pg-core";
+import { pgTable, varchar, timestamp, integer, text, serial, real, unique } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
   userId: serial("user_id").primaryKey(),
@@ -6,6 +6,7 @@ export const users = pgTable("users", {
   lozinkaHash: varchar("lozinka_hash", { length: 255 }).notNull(),
   korisnickoIme: varchar("korisnicko_ime", { length: 100 }).notNull().unique(),
   slikaKorisnika: text("slika_korisnika"),
+  bio: text("bio"),
   starost: integer("starost").notNull(),
   pol: varchar("pol", { length: 20 }).notNull(),
   nivoKondicije: varchar("nivo_kondicije", { length: 20 }).notNull(),
@@ -34,16 +35,22 @@ export const runs = pgTable("runs", {
   hostUserId: integer("host_user_id").notNull().references(() => users.userId),
 });
 
-export const runUsers = pgTable("run_users", {
-  runUserId: serial("run_user_id").primaryKey(),
-  runId: integer("run_id")
-    .notNull()
-    .references(() => runs.runId),
-  userId: integer("user_id")
-    .notNull()
-    .references(() => users.userId),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+export const runUsers = pgTable(
+  "run_users",
+  {
+    runUserId: serial("run_user_id").primaryKey(),
+    runId: integer("run_id")
+      .notNull()
+      .references(() => runs.runId),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.userId),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    runUserUnique: unique("run_users_run_id_user_id_unique").on(table.runId, table.userId),
+  })
+);
 
 export const messages = pgTable("messages", {
   messageId: serial("message_id").primaryKey(),
@@ -71,3 +78,4 @@ export const sessions = pgTable("sessions", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
+

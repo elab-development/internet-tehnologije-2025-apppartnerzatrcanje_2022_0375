@@ -1,19 +1,9 @@
 import { and, eq } from "drizzle-orm";
-import { z } from "zod";
 import { ratings, runUsers, runs } from "@/drizzle/schema";
 import { jsonError, jsonSuccess } from "@/lib/api/response";
 import { getAuthUser } from "@/lib/auth";
 import { db } from "@/lib/db";
-
-const createRatingSchema = z.object({
-  runId: z.coerce.number().int().positive("Neispravan trening."),
-  score: z.coerce.number().int().min(1, "Ocena mora biti od 1 do 5.").max(5, "Ocena mora biti od 1 do 5."),
-  comment: z
-    .string()
-    .trim()
-    .min(1, "Komentar je obavezan.")
-    .max(1000, "Komentar moze imati najvise 1000 karaktera."),
-});
+import { createRatingSchema } from "@/lib/validation/ratings";
 
 export async function POST(request: Request) {
   try {
