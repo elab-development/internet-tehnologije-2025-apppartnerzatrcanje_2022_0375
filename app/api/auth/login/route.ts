@@ -4,6 +4,8 @@ import { sessions, users } from "@/drizzle/schema";
 import { jsonError, jsonSuccess } from "@/lib/api/response";
 import { db } from "@/lib/db";
 import { verifyPassword } from "@/lib/password";
+import { verifyCaptchaToken } from "@/lib/security/captcha";
+import { rateLimit } from "@/lib/security/rate-limit";
 import {
   createSessionToken,
   getSessionExpiryDate,
@@ -14,10 +16,25 @@ import {
 const loginSchema = z.object({
   email: z.email(),
   password: z.string().min(1),
+  captchaToken: z.string().optional(),
 });
 
 export async function POST(request: Request) {
   try {
+    const limit = rateLimit(request, "auth-login", {
+      windowMs: 60_000,
+      max: 10,
+    });
+    if (!limit.ok) {
+      return jsonError(
+        {
+          code: "RATE_LIMITED",
+          message: "Too many login attempts. Try again soon.",
+        },
+        429
+      );
+    }
+
     const body = await request.json();
     const parsed = loginSchema.safeParse(body);
 
@@ -32,7 +49,18 @@ export async function POST(request: Request) {
       );
     }
 
-    const { email, password } = parsed.data;
+    const { email, password, captchaToken } = parsed.data;
+    const captcha = await verifyCaptchaToken(captchaToken);
+    if (!captcha.ok) {
+      return jsonError(
+        {
+          code: "CAPTCHA_FAILED",
+          message: "Captcha verification failed.",
+        },
+        400
+      );
+    }
+
     const user = await db.query.users.findFirst({
       where: eq(users.email, email),
       columns: {
