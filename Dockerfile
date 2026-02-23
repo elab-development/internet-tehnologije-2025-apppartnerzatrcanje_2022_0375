@@ -5,6 +5,10 @@ RUN npm ci
 
 FROM node:22-alpine AS builder
 WORKDIR /app
+ARG DATABASE_URL=postgresql://postgres:postgres@localhost:5432/runly
+ARG NEXT_PUBLIC_APP_NAME=Runly
+ENV DATABASE_URL=${DATABASE_URL}
+ENV NEXT_PUBLIC_APP_NAME=${NEXT_PUBLIC_APP_NAME}
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
