@@ -4,6 +4,8 @@ import { users } from "@/drizzle/schema";
 import { jsonError, jsonSuccess } from "@/lib/api/response";
 import { db } from "@/lib/db";
 import { hashPassword } from "@/lib/password";
+import { verifyCaptchaToken } from "@/lib/security/captcha";
+import { rateLimit } from "@/lib/security/rate-limit";
 
 const registerSchema = z.object({
   email: z.string().trim().email(),
@@ -23,10 +25,25 @@ const registerSchema = z.object({
   pol: z.enum(["muski", "zenski", "drugo"]),
   nivoKondicije: z.enum(["pocetni", "srednji", "napredni"]),
   tempoTrcanja: z.coerce.number().positive(),
+  captchaToken: z.string().optional(),
 });
 
 export async function POST(request: Request) {
   try {
+    const limit = rateLimit(request, "auth-register", {
+      windowMs: 60_000,
+      max: 5,
+    });
+    if (!limit.ok) {
+      return jsonError(
+        {
+          code: "RATE_LIMITED",
+          message: "Too many registration attempts. Try again soon.",
+        },
+        429
+      );
+    }
+
     const body = await request.json();
     const parsed = registerSchema.safeParse(body);
 
@@ -42,6 +59,17 @@ export async function POST(request: Request) {
     }
 
     const payload = parsed.data;
+    const captcha = await verifyCaptchaToken(payload.captchaToken);
+    if (!captcha.ok) {
+      return jsonError(
+        {
+          code: "CAPTCHA_FAILED",
+          message: "Captcha verification failed.",
+        },
+        400
+      );
+    }
+
     const existing = await db.query.users.findFirst({
       where: eq(users.email, payload.email),
       columns: { userId: true },
