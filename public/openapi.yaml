@@ -1,0 +1,338 @@
+openapi: 3.0.3
+info:
+  title: Runly API
+  version: 1.0.0
+  description: API for authentication, profiles, runs, chat, ratings, dashboard, and admin operations.
+servers:
+  - url: http://localhost:3000
+    description: Local development
+tags:
+  - name: Auth
+  - name: Profile
+  - name: Runs
+  - name: Chat
+  - name: Ratings
+  - name: Dashboard
+  - name: Admin
+components:
+  securitySchemes:
+    SessionCookie:
+      type: apiKey
+      in: cookie
+      name: runly_session
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+      required: [success, error]
+security:
+  - SessionCookie: []
+paths:
+  /api/health:
+    get:
+      tags: [Auth]
+      summary: Health check endpoint
+      security: []
+      responses:
+        "200":
+          description: Service is healthy
+  /api/auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new runner account
+      security: []
+      responses:
+        "201":
+          description: User created
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Email already registered
+  /api/auth/login:
+    post:
+      tags: [Auth]
+      summary: Login and create session cookie
+      security: []
+      responses:
+        "200":
+          description: Login successful
+        "401":
+          description: Invalid credentials
+  /api/auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout and clear session cookie
+      responses:
+        "200":
+          description: Logout successful
+  /api/auth/me:
+    get:
+      tags: [Auth]
+      summary: Get currently authenticated user
+      responses:
+        "200":
+          description: Current user data
+        "401":
+          description: Not authenticated
+  /api/profile/me:
+    get:
+      tags: [Profile]
+      summary: Get current profile
+      responses:
+        "200":
+          description: Profile data
+        "401":
+          description: Not authenticated
+    patch:
+      tags: [Profile]
+      summary: Update current profile
+      responses:
+        "200":
+          description: Profile updated
+        "400":
+          description: Validation error
+  /api/runs:
+    get:
+      tags: [Runs]
+      summary: List runs with filters
+      responses:
+        "200":
+          description: Runs list
+    post:
+      tags: [Runs]
+      summary: Create a run
+      responses:
+        "201":
+          description: Run created
+        "401":
+          description: Not authenticated
+  /api/runs/{id}:
+    patch:
+      tags: [Runs]
+      summary: Update run (creator only)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Run updated
+        "403":
+          description: Forbidden
+    delete:
+      tags: [Runs]
+      summary: Delete run (creator only)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Run deleted
+        "403":
+          description: Forbidden
+  /api/runs/{id}/join:
+    post:
+      tags: [Runs]
+      summary: Join a run
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Joined
+  /api/runs/{id}/leave:
+    post:
+      tags: [Runs]
+      summary: Leave a run
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Left
+  /api/chat/{runId}/messages:
+    get:
+      tags: [Chat]
+      summary: List chat messages for a run (members only)
+      parameters:
+        - in: path
+          name: runId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Messages
+    post:
+      tags: [Chat]
+      summary: Create chat message in a run (members only)
+      parameters:
+        - in: path
+          name: runId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "201":
+          description: Message created
+  /api/chat/{runId}/messages/{messageId}:
+    patch:
+      tags: [Chat]
+      summary: Edit chat message (sender only)
+      parameters:
+        - in: path
+          name: runId
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: messageId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Message updated
+    delete:
+      tags: [Chat]
+      summary: Delete chat message (sender only)
+      parameters:
+        - in: path
+          name: runId
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: messageId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Message deleted
+  /api/ratings:
+    post:
+      tags: [Ratings]
+      summary: Create rating for run host
+      responses:
+        "201":
+          description: Rating created
+  /api/ratings/{id}:
+    patch:
+      tags: [Ratings]
+      summary: Update rating (author/admin)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Rating updated
+    delete:
+      tags: [Ratings]
+      summary: Delete rating (author/admin)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Rating deleted
+  /api/users/{id}/ratings:
+    get:
+      tags: [Ratings]
+      summary: Get ratings for user
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      security: []
+      responses:
+        "200":
+          description: Ratings list
+  /api/dashboard/me:
+    get:
+      tags: [Dashboard]
+      summary: Get dashboard data for logged user
+      responses:
+        "200":
+          description: Dashboard data
+  /api/admin/users:
+    get:
+      tags: [Admin]
+      summary: List users (admin only)
+      responses:
+        "200":
+          description: Users list
+        "403":
+          description: Forbidden
+  /api/admin/users/{id}:
+    delete:
+      tags: [Admin]
+      summary: Delete user (admin only)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: User deleted
+        "403":
+          description: Forbidden
+  /api/admin/runs:
+    get:
+      tags: [Admin]
+      summary: List runs (admin only)
+      responses:
+        "200":
+          description: Runs list
+        "403":
+          description: Forbidden
+  /api/admin/runs/{id}:
+    delete:
+      tags: [Admin]
+      summary: Delete run (admin only)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Run deleted
+        "403":
+          description: Forbidden
