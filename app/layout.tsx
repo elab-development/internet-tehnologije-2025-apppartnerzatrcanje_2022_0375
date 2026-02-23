@@ -1,4 +1,5 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
+import Script from "next/script";
 import "./globals.css";
 import { MainNav } from "@/components/main-nav";
 
@@ -17,6 +18,10 @@ export default function RootLayout({
       <body className="min-h-screen text-slate-900 antialiased">
         <MainNav />
         <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
+        <Script
+          src={`https://www.google.com/recaptcha/api.js?render=${process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY ?? ""}`}
+          strategy="afterInteractive"
+        />
       </body>
     </html>
   );
