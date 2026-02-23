@@ -1,36 +1,86 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Runly
 
-## Getting Started
+Runly je web aplikacija za organizaciju grupnih treninga trcanja sa:
+- autentikacijom i pristupom preko sesija
+- kreiranjem/pretragom/prijavom/odjavom sa treninga
+- chat-om za ucesnike treninga
+- ocenjivanjem kreatora treninga
+- admin alatima za moderaciju
+- pregledom statistike i map filterima
 
-First, run the development server:
+## Tehnologije
+- Next.js (App Router) + React + TypeScript
+- PostgreSQL
+- Drizzle ORM + Drizzle Kit migracije
+- Vitest za automatizovane testove
+
+## Preduslovi
+- Node.js 20+
+- npm 10+
+- PostgreSQL 16+ (ili Docker)
+
+## Promenljive okruzenja
+Kreiraj `.env.local` fajl u root direktorijumu projekta:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/runly
+NEXT_PUBLIC_APP_NAME=Runly
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Lokalno pokretanje
+```bash
+npm install
+npm run db:push
+npm run dev
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Aplikacija: `http://localhost:3000`
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Docker
+Pokretanje aplikacije i baze preko Docker Compose:
 
-## Learn More
+```bash
+docker compose up --build
+```
 
-To learn more about Next.js, take a look at the following resources:
+Podrazumevani portovi:
+- aplikacija: `3000`
+- postgres: `5432`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Korisne skripte
+```bash
+npm run lint
+npm run test
+npm run build
+npm run db:generate
+npm run db:push
+npm run db:studio
+npm run db:seed:admin
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## API dokumentacija (Swagger/OpenAPI)
+- OpenAPI specifikacija: `public/openapi.yaml`
+- Swagger UI stranica: `http://localhost:3000/docs`
 
-## Deploy on Vercel
+Swagger UI se ucitava sa `/swagger.html` i prikazuje lokalnu OpenAPI specifikaciju.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Glavni API moduli
+- Auth: `/api/auth/*`
+- Profile: `/api/profile/me`
+- Runs: `/api/runs*`
+- Chat: `/api/chat/*`
+- Ratings: `/api/ratings*`, `/api/users/:id/ratings`
+- Dashboard: `/api/dashboard/me`
+- Admin: `/api/admin/*`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Deploy (Vercel)
+Preporuceni produkcioni setup:
+1. Deploy aplikacije na Vercel
+2. Koriscenje managed Postgres baze (Neon/Supabase/Railway)
+3. Podesavanje produkcionih env varijabli na Vercel-u:
+   - `DATABASE_URL`
+   - `NEXT_PUBLIC_APP_NAME`
+4. Pokretanje migracija (`npm run db:push`) nad produkcionom bazom
+
+## Status
+Trenutna implementacija pokriva auth, profile, runs, chat, ratings, dashboard i admin tokove, uz pocetnu bazu automatizovanih testova.
