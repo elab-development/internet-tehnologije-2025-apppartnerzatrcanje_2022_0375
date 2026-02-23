@@ -7,6 +7,25 @@ import { Card } from "@/components/ui/card";
 import { InputField } from "@/components/ui/input-field";
 import { Button } from "@/components/ui/button";
 
+declare global {
+  interface Window {
+    grecaptcha?: {
+      ready: (callback: () => void) => void;
+      execute: (siteKey: string, options: { action: string }) => Promise<string>;
+    };
+  }
+}
+
+async function getCaptchaToken(action: string) {
+  const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+  if (!siteKey || !window.grecaptcha) {
+    return null;
+  }
+
+  await new Promise<void>((resolve) => window.grecaptcha?.ready(resolve));
+  return window.grecaptcha.execute(siteKey, { action });
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -20,6 +39,12 @@ export default function LoginPage() {
     setIsSubmitting(true);
 
     try {
+      const captchaToken = await getCaptchaToken("login");
+      if (!captchaToken) {
+        setError("Captcha nije dostupna. Pokusaj ponovo.");
+        return;
+      }
+
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: {
@@ -28,6 +53,7 @@ export default function LoginPage() {
         body: JSON.stringify({
           email: email.trim(),
           password,
+          captchaToken,
         }),
       });
 

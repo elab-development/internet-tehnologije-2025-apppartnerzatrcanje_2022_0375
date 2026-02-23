@@ -7,6 +7,25 @@ import { Card } from "@/components/ui/card";
 import { InputField, SelectField } from "@/components/ui/input-field";
 import { Button } from "@/components/ui/button";
 
+declare global {
+  interface Window {
+    grecaptcha?: {
+      ready: (callback: () => void) => void;
+      execute: (siteKey: string, options: { action: string }) => Promise<string>;
+    };
+  }
+}
+
+async function getCaptchaToken(action: string) {
+  const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+  if (!siteKey || !window.grecaptcha) {
+    return null;
+  }
+
+  await new Promise<void>((resolve) => window.grecaptcha?.ready(resolve));
+  return window.grecaptcha.execute(siteKey, { action });
+}
+
 export default function RegisterPage() {
   const router = useRouter();
   const [username, setUsername] = useState("");
@@ -60,6 +79,12 @@ export default function RegisterPage() {
     setIsSubmitting(true);
 
     try {
+      const captchaToken = await getCaptchaToken("register");
+      if (!captchaToken) {
+        setError("Captcha nije dostupna. Pokusaj ponovo.");
+        return;
+      }
+
       const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: {
@@ -73,8 +98,8 @@ export default function RegisterPage() {
           pol,
           nivoKondicije,
           tempoTrcanja: parsedTempo,
-          role: "runner",
           slikaKorisnika: slikaKorisnika.trim() ? slikaKorisnika.trim() : null,
+          captchaToken,
         }),
       });
 
