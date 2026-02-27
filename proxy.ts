@@ -41,7 +41,7 @@ function applySecurityHeaders(response: NextResponse, request: NextRequest) {
   response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
   response.headers.set(
     "Content-Security-Policy",
-    "default-src 'self' https:; img-src 'self' https: data:; style-src 'self' 'unsafe-inline' https:; script-src 'self' 'unsafe-inline' https:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+    "default-src 'self' https:; img-src 'self' https: data:; style-src 'self' 'unsafe-inline' https:; script-src 'self' 'unsafe-inline' https:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'"
   );
 
   if (originHeader && originHeader === allowedOrigin) {

@@ -4,6 +4,8 @@ info:
   version: 1.0.0
   description: API for authentication, profiles, runs, chat, ratings, dashboard, and admin operations.
 servers:
+  - url: https://internet-tehnologije-2025-apppartne.vercel.app
+    description: Production deployment
   - url: http://localhost:3000
     description: Local development
 tags:
